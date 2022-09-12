@@ -1,0 +1,27 @@
+{
+  "name": "glsdb",
+  "version": "0.0.1",
+  "description": "Global Storage Database Abstraction",
+  "type": "module",
+  "main": "/src/glsdb.js",
+  "exports": {
+    ".": "./src/glsdb.js",
+    "./qoper8-fastify": "./qoper8-fastify/glsdb-qoper8-fastify-startup.js",
+    "./mgdbx-aarch64": "./mgdbx-aarch64/mg-dbx.node"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/robtweed/glsDB.git"
+  },
+  "author": "Rob Tweed, M/Gateway Developments Ltd",
+  "license": "Apache-2.0",
+  "dependencies": {
+  },
+  "bugs": {
+    "url": "https://github.com/robtweed/glsDB/issues"
+  },
+  "homepage": "https://github.com/robtweed/glsDB#readme"
+}
