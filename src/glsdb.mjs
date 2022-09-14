@@ -23,7 +23,7 @@
  |  limitations under the License.                                           |
  ----------------------------------------------------------------------------
 
-12 September 2022
+14 September 2022
 
  */
 
@@ -138,11 +138,11 @@ class glsDB {
     let dbm = db_module.get(db);
 
     let arch = process.arch;
-    if (dbm.module === 'mg-dbx' && ['arm64', 'x64'].includes(arch)) {
+    if (dbm.module === 'mg-dbx' && ['arm', 'arm64', 'x64'].includes(arch)) {
       dbm.module = 'glsdb/mgdbx-' + arch;
     }
 
-    if (dbm.module === 'mg-dbx-bdb' && ['arm64', 'x64'].includes(arch)) {
+    if (dbm.module === 'mg-dbx-bdb' && ['arm', 'arm64', 'x64'].includes(arch)) {
       dbm.module = 'glsdb/mgdbx-bdb-' + arch;
     }
 
@@ -638,26 +638,33 @@ class glsDB {
     }
 
     if (dbm.type === 'IRIS' || dbm.type === 'Cache') {
+      let mclass = db_mod.mclass;
       this.classMethod = function(cls, method) {
         let args = [...arguments];
         args.splice(0, 2);
         return DB.classmethod(cls, method, ...args);
+        //return new mclass(DB, cls, method, ...args);
       }
 
       this.irisClassExists = function(clsName) {
         let packageName = DB.classmethod(clsName, "%PackageName");
+        //let packageName = new mclass(DB, clsName, "%PackageName");
         if (packageName === '') return false;
         let className = DB.classmethod(clsName, "%ClassName");
+        //let className = new mclass(DB, clsName, "%ClassName");
         if (className === '') return false;
         let fqn = packageName + '.' + className;
         return (DB.classmethod('%Dictionary.ClassDefinition', "%ExistsId", fqn) === '1');
+        //return (new mclass(DB, '%Dictionary.ClassDefinition', "%ExistsId", fqn) === '1');
       }
 
       this.irisClass = function(clsName) {
 
         let packageName = DB.classmethod(clsName, "%PackageName");
+        //let packageName = new mclass(DB, clsName, "%PackageName");
         if (packageName === '') return null;
         let className = DB.classmethod(clsName, "%ClassName");
+        //let className = new mclass(DB, clsName, "%ClassName");
         if (className === '') return null;
         let fqn = packageName + '.' + className;
 
@@ -665,9 +672,11 @@ class glsDB {
         let methods = {}
 
         let classExists = (DB.classmethod('%Dictionary.ClassDefinition', "%ExistsId", fqn) === '1');
+        //let classExists = (new mclass(DB, '%Dictionary.ClassDefinition', "%ExistsId", fqn) === '1');
 
         let ClassDefinition = DB.classmethod('%Dictionary.ClassDefinition', "%OpenId", fqn);
-        console.log(22222);
+        //let ClassDefinition = new mclass(DB, '%Dictionary.ClassDefinition', "%OpenId", fqn);
+
         if (ClassDefinition !== '') {
           let Properties = ClassDefinition.getproperty('Properties');
           let count = +Properties.method('Count');
@@ -702,10 +711,12 @@ class glsDB {
 
             if (id) {
               let obj = DB.classmethod(this.fqn, "%OpenId", id);
+              //let obj = new mclass(DB, this.fqn, "%OpenId", id);
               return this.#proxy(obj);
             }
             else {
               let obj = DB.classmethod(this.fqn, "%New");
+              //let obj = new mclass(DB, this.fqn, "%New");
               return this.#proxy(obj);
             }
 
