@@ -1,6 +1,6 @@
 {
   "name": "glsdb",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Global Storage Database Abstraction",
   "type": "module",
   "main": "/src/glsdb.mjs",
@@ -15,7 +15,7 @@
     "./mgdbx-bdb-x64-v18": "./mgdbx-x64-v18/mg-dbx-bdb.node"
   },
   "engines" : {
-    "node" : ">=18.0.0"
+    "node" : ">=14.0.0"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
