@@ -1,16 +1,21 @@
 {
   "name": "glsdb",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Global Storage Database Abstraction",
   "type": "module",
   "main": "/src/glsdb.mjs",
   "exports": {
     ".": "./src/glsdb.mjs",
     "./qoper8-fastify": "./qoper8-fastify/glsdb-qoper8-fastify-startup.mjs",
-    "./mgdbx-arm64": "./mgdbx-arm64/mg-dbx.node",
-    "./mgdbx-bdb-arm64": "./mgdbx-arm64/mg-dbx-bdb.node",
-    "./mgdbx-x64": "./mgdbx-x64/mg-dbx.node",
-    "./mgdbx-bdb-x64": "./mgdbx-x64/mg-dbx-bdb.node"
+    "./mgdbx-arm-v18": "./mgdbx-arm-v18/mg-dbx.node",
+    "./mgdbx-bdb-arm-v18": "./mgdbx-arm-v18/mg-dbx-bdb.node",
+    "./mgdbx-arm64-v18": "./mgdbx-arm64-v18/mg-dbx.node",
+    "./mgdbx-bdb-arm64-v18": "./mgdbx-arm64-v18/mg-dbx-bdb.node",
+    "./mgdbx-x64-v18": "./mgdbx-x64-v18/mg-dbx.node",
+    "./mgdbx-bdb-x64-v18": "./mgdbx-x64-v18/mg-dbx-bdb.node"
+  },
+  "engines" : {
+    "node" : ">=18.0.0"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

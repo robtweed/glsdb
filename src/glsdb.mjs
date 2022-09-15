@@ -23,7 +23,7 @@
  |  limitations under the License.                                           |
  ----------------------------------------------------------------------------
 
-14 September 2022
+15 September 2022
 
  */
 
@@ -137,13 +137,20 @@ class glsDB {
     if (!db_module.has(db)) return {ok: false};
     let dbm = db_module.get(db);
 
+    // if possible load the pre-built mg-dbx binaries...
+
     let arch = process.arch;
+    let version = process.version.split('.')[0];
     if (dbm.module === 'mg-dbx' && ['arm', 'arm64', 'x64'].includes(arch)) {
-      dbm.module = 'glsdb/mgdbx-' + arch;
+      if (['v18'].includes(version)) {
+        dbm.module = 'glsdb/mgdbx-' + arch + '-' + version';
+      }
     }
 
     if (dbm.module === 'mg-dbx-bdb' && ['arm', 'arm64', 'x64'].includes(arch)) {
-      dbm.module = 'glsdb/mgdbx-bdb-' + arch;
+      if (['v18'].includes(version)) {
+        dbm.module = 'glsdb/mgdbx-bdb-' + arch + '-' + version;
+      }
     }
 
     const db_mod = localRequire(dbm.module);
