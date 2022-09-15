@@ -143,7 +143,7 @@ class glsDB {
     let version = process.version.split('.')[0];
     if (dbm.module === 'mg-dbx' && ['arm', 'arm64', 'x64'].includes(arch)) {
       if (['v18'].includes(version)) {
-        dbm.module = 'glsdb/mgdbx-' + arch + '-' + version';
+        dbm.module = 'glsdb/mgdbx-' + arch + '-' + version;
       }
     }
 
