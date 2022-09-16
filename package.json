@@ -16,7 +16,7 @@
     "./mgdbx-arm64-v18": "./mgdbx-arm64-v18/mg-dbx.node",
     "./mgdbx-bdb-arm64-v18": "./mgdbx-arm64-v18/mg-dbx-bdb.node",
     "./mgdbx-x64-v16": "./mgdbx-x64-v16/mg-dbx.node",
-    "./mgdbx-bdb-x64-v16": "./mgdbx-x64-v16/mg-dbx-bdb.node"
+    "./mgdbx-bdb-x64-v16": "./mgdbx-x64-v16/mg-dbx-bdb.node",
     "./mgdbx-x64-v18": "./mgdbx-x64-v18/mg-dbx.node",
     "./mgdbx-bdb-x64-v18": "./mgdbx-x64-v18/mg-dbx-bdb.node"
   },
