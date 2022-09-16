@@ -140,15 +140,16 @@ class glsDB {
     // if possible load the pre-built mg-dbx binaries...
 
     let arch = process.arch;
+    if (arch === 'x64' && process.platform === 'win32') arch = 'win';
     let version = process.version.split('.')[0];
-    if (dbm.module === 'mg-dbx' && ['arm', 'arm64', 'x64'].includes(arch)) {
-      if (['v16', 'v18'].includes(version)) {
+    if (dbm.module === 'mg-dbx' && ['win', 'arm', 'arm64', 'x64'].includes(arch)) {
+      if (['v14', 'v16', 'v18'].includes(version)) {
         dbm.module = 'glsdb/mgdbx-' + arch + '-' + version;
       }
     }
 
-    if (dbm.module === 'mg-dbx-bdb' && ['arm', 'arm64', 'x64'].includes(arch)) {
-      if (['v16', 'v18'].includes(version)) {
+    if (dbm.module === 'mg-dbx-bdb' && ['win', 'arm', 'arm64', 'x64'].includes(arch)) {
+      if (['v14', 'v16', 'v18'].includes(version)) {
         dbm.module = 'glsdb/mgdbx-bdb-' + arch + '-' + version;
       }
     }
