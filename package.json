@@ -1,16 +1,22 @@
 {
   "name": "glsdb",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Global Storage Database Abstraction",
   "type": "module",
   "main": "/src/glsdb.mjs",
   "exports": {
     ".": "./src/glsdb.mjs",
     "./qoper8-fastify": "./qoper8-fastify/glsdb-qoper8-fastify-startup.mjs",
+    "./mgdbx-arm-v16": "./mgdbx-arm-v16/mg-dbx.node",
+    "./mgdbx-bdb-arm-v16": "./mgdbx-arm-v16/mg-dbx-bdb.node",
     "./mgdbx-arm-v18": "./mgdbx-arm-v18/mg-dbx.node",
     "./mgdbx-bdb-arm-v18": "./mgdbx-arm-v18/mg-dbx-bdb.node",
+    "./mgdbx-arm64-v16": "./mgdbx-arm64-v16/mg-dbx.node",
+    "./mgdbx-bdb-arm64-v16": "./mgdbx-arm64-v16/mg-dbx-bdb.node",
     "./mgdbx-arm64-v18": "./mgdbx-arm64-v18/mg-dbx.node",
     "./mgdbx-bdb-arm64-v18": "./mgdbx-arm64-v18/mg-dbx-bdb.node",
+    "./mgdbx-x64-v16": "./mgdbx-x64-v16/mg-dbx.node",
+    "./mgdbx-bdb-x64-v16": "./mgdbx-x64-v16/mg-dbx-bdb.node"
     "./mgdbx-x64-v18": "./mgdbx-x64-v18/mg-dbx.node",
     "./mgdbx-bdb-x64-v18": "./mgdbx-x64-v18/mg-dbx-bdb.node"
   },
