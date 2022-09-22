@@ -18,8 +18,10 @@ In this tutorial I'll assume you're using YottaDB and that you've enabled the *m
           tcp_port: 7041
         };
 
+However, you can use and open any of the supported Global Storage databases or emulations: the *glsdb* tutorial examples below will behave identically on all of them.
 
 We're now ready to begin!
+
 
 Remember to finish any scripts with:
 
@@ -118,16 +120,16 @@ We're going to add the previous example as the first Person record, ie:
           favouriteColours: ['blue', 'green']
         };
 
-So we first use the *_increment()* API to obtain a unique Id:
+So we first use the *increment()* API to obtain a unique Id:
 
-        let id = personId._increment();
+        let id = personId.increment();
 
 
 As this is the first time we've done this, *id* will have a value of 1 (which is also now stored in the PersonIdentifier Global in the database).
 
 We can now do this:
 
-        person.$(id)._document = record;
+        person.$(id).document = record;
 
 What this does is:
 
@@ -144,20 +146,20 @@ To retrieve our Person record object at a later date, we'd simply do the followi
 
 
         let person = new glsdb.node('Person.1');
-        let record = person._document;
+        let record = person.document;
 
 
 Alternatively we could do this:
 
         let person = new glsdb.node('Person');
-        let record = person.$(1)._document;
+        let record = person.$(1).document;
 
 We don't have to recover the record as an in-memory object, however.  We can, if we wish/prefer, access the record's contents *in-situ* within the database.
 
 For example:
 
         let person = new glsdb.node('Person.1');
-        let name = person.$('firstName')._value + ' ' + record.$('lastName')._value
+        let name = person.$('firstName').value + ' ' + record.$('lastName').value
 
 Note the use of the *$()* method which returns a *node* instance for the Child node of the *person node* with the specified key.
 
@@ -258,92 +260,94 @@ For example, starting with this *node*:
 
 We can get its first Child Node:
 
-        let firstChild = person._firstChild;
+        let firstChild = person.firstChild;
 
 What has been returned is a *node* instance, so we can then use its various properties to examine and explore it:
 
-        console.log('path: ' + firstChild._path);               // Person.1.address
-        console.log('key: ' + firstChild._key);                 // address
-        console.log('exists: ' + firstChild._exists);           // true
-        console.log('hasValue: ' + firstChild._hasValue);       // false (because it's an intermediate node)
-        console.log('value: ' + firstChild._value);             // {empty string} because it has no value
-        console.log('hasChildren: ' + firstChild._hasChildren); // true
-        console.log('isLeafNode: ' + firstChild._isLeafNode);   // false
+        console.log('path: ' + firstChild.path);               // Person.1.address
+        console.log('key: ' + firstChild.key);                 // address
+        console.log('exists: ' + firstChild.exists);           // true
+        console.log('hasValue: ' + firstChild.hasValue);       // false (because it's an intermediate node)
+        console.log('value: ' + firstChild.value);             // {empty string} because it has no value
+        console.log('hasChildren: ' + firstChild.hasChildren); // true
+        console.log('isLeafNode: ' + firstChild.isLeafNode);   // false
+        console.log('isArray: ' + firstChild.isArray);         // false
 
 
-We can now get this node's *Next Sibling* node, which should represent the key *favouriteColours*
+We can now get this node's *Next Sibling* node, which should represent the key *favouriteColours* which is an Array *node*:
 
 
-        let sibling = firstChild._nextSibling;
-        console.log('path: ' + sibling._path);               // Person.1.favouriteColours
-        console.log('key: ' + sibling._key);                 // favouriteColours
-        console.log('exists: ' + sibling._exists);           // true
-        console.log('hasValue: ' + sibling._hasValue);       // false (because it's an intermediate node)
-        console.log('value: ' + sibling._value);             // {empty string} because it has no value
-        console.log('hasChildren: ' + sibling._hasChildren); // true
-        console.log('isLeafNode: ' + sibling._isLeafNode);   // false
+        let sibling = firstChild.nextSibling;
+        console.log('path: ' + sibling.path);               // Person.1.favouriteColours
+        console.log('key: ' + sibling.key);                 // favouriteColours
+        console.log('exists: ' + sibling.exists);           // true
+        console.log('hasValue: ' + sibling.hasValue);       // false (because it's an intermediate node)
+        console.log('value: ' + sibling.value);             // {empty string} because it has no value
+        console.log('hasChildren: ' + sibling.hasChildren); // true
+        console.log('isLeafNode: ' + sibling.isLeafNode);   // false
+        console.log('isArray: ' + firstChild.isArray);      // true
 
 
 Let's now get the favourite colours for this record.  We can do this in several ways.  Let's do the long way first.
 
-We can get all the Child Nodes for the *favouriteColours node* above using the *_children* property:
+We can get all the Child Nodes for the *favouriteColours node* above using the *children* property:
 
-        let colourNodes = sibling._children;
+        let colourNodes = sibling.children;
 
 This will be a JavaScript array containing all the Child *node*s in collating sequence.
 
 We could then iterate through them an access their values, eg:
 
         colourNodes.forEach(function(node) {
-          console.log(node._value);
+          console.log(node.value);
         });
 
         // blue
         // green
 
-Alternatively, and much more simply, we could use the *node's _document getter* to return the original array of favourite colours:
+Alternatively, and much more simply, we could use the *node's document getter* to return the original array of favourite colours:
 
-        let colours = sibling._document;
+        let colours = sibling.document;
 
         // ['blue', 'green']
 
 
 We can also get a *node*'s parent *node*, for example using the *colourNodes* array from the example above:
 
-        let parent = colourNodes[0]._parent;
-        console.log(parent._key);             // favouriteColours
+        let parent = colourNodes[0].parent;
+        console.log(parent.key);             // favouriteColours
 
 
 ## Setting/Updating Data Values
 
-We've seen how the *_document setter* property can be used to merge the contents of a JavaScript object into a corresponding set of descendent *nodes* of a target *node8.
+We've seen how the *document setter* property can be used to merge the contents of a JavaScript object into a corresponding set of descendent *nodes* of a target *node8.
 
-However, it's also possible to set the value of individual *node*s using the *_value setter* property.
+However, it's also possible to set the value of individual *node*s using the *value setter* property.
 
 For example, let's change the firstName value:
 
         let firstName = new glsdb('Person.1.firstName');
-        firstName._value = 'Simon';
+        firstName.value = 'Simon';
 
 
 ## Deleting Nodes
 
-Applying a *node*'s *_delete()* method will delete it and any descendent *nodes* (if it's an Intermediate Node).
+Applying a *node*'s *delete()* method will delete it and any descendent *nodes* (if it's an Intermediate Node).
 
 For example:
 
 
         let city = new glsdb('Person.1.city');
-        city._delete();
+        city.delete();
 
 
 As the *city* Node was a Leaf Node, this will just delete this specific *city* Node from the database.
 
 
-However, if we apply the *_delete()* to an Intermediate Node such as *telephone*:
+However, if we apply the *delete()* to an Intermediate Node such as *telephone*:
 
         let tel = new glsdb('Person.1.telephone');
-        tel._delete();
+        tel.delete();
 
 ... then you'll find that both telephone numbers (*mobile* and *landline*) have been deleted along with the intermediate node we specifically deleted.  If we use the hierachical representation of our database it becomes clearer why this has happened:
 
@@ -376,13 +380,13 @@ So this means we can remove an entire person record stored by deleting at the *i
 
 
         let person = new glsdb('Person.1');
-        person._delete();
+        person.delete();
 
 
 And you can even delete/clear down an entire database if you wish, by deleting its top *node*, eg:
 
         let Person = new glsdb('Person');
-        Person._delete();
+        Person.delete();
 
 
 ## Iterating Through Nodes *in-situ*
@@ -391,20 +395,20 @@ And you can even delete/clear down an entire database if you wish, by deleting i
 
 This provides a powerful mechanism for processing, querying and/or manipulating data in a Global Storage database.  You should note that the native Global Storage databases in particular are optimised for this type of iteration, making it an exceptionally fast operation.
 
-### *_forEachChildNode()*
+### *forEachChildNode()*
 
 As its name implies, this method allows you to iterate through all or a subset of a *node*'s Child Nodes.
 
 To iterate through all Child Nodes, simply provide a callback function which returns an instance of each Child *node* at each iteration step.  For example, let's suppose we had several hundred Person records in our database, each identified by its unique *id* key.  We could iterate through the entire database:
 
         let Person = new glsdb('Person');
-        Person._forEachChildNode(function(person) {
-          let record = person._document;
+        Person.forEachChildNode(function(person) {
+          let record = person.document;
           // do something with the record;
 
           // or access in-situ, eg:
 
-          let lastName = person.$('lastName')._value;
+          let lastName = person.$('lastName').value;
           console.log(lastName);
 
         });
@@ -413,14 +417,14 @@ To iterate through all Child Nodes, simply provide a callback function which ret
 We can modify the iteration by providing one or more options.  For example, we could start the iteration at id 100:
 
         let options = {from: 100};
-        Person._forEachChildNode(options, function(person) {
+        Person.forEachChildNode(options, function(person) {
           // process the person node
         });
 
 and we could terminate it at id 200:
 
         let options = {from: 100, to: 200};
-        Person._forEachChildNode(options, function(person) {
+        Person.forEachChildNode(options, function(person) {
           // process the person node
         });
 
@@ -429,7 +433,7 @@ If the Child keys are alphabetic, you can limit the search to ones that start wi
 
         let address = new glsdb('Person.1.address');
         let options = {startsWith: 'c'};
-        address._forEachChildNode(options, function(person) {
+        address.forEachChildNode(options, function(person) {
           // limited to just the "city", "country" and "county" keys
         });
 
@@ -438,15 +442,32 @@ Occasionally you might want the processing to be done in reverse collating seque
         let options = {direction: 'reverse'};
 
 
+Note that you could achieve the same effect by using the *children* property of a *node* and iterating through the child *node*s contained in the array that it returns.  However, a *node* in a real-world Global Storage database might have a huge number of child nodes: take this example:
 
-### *_forEachLeafNode()*
+        let Person = new glsdb('Person');
+        let persons = Person.children;
+
+If our database contained many tens of thousands of person records, this would be incredibly inefficient, particularly if we are going to selectively process only particular person records in the collection.  It would also run the risk of exhausting available local memory, trying to create the *persons* Array of Child *node*s.
+
+In such a situation, it's far more preferable to use the *forEachChildNode()* method, which iterates in-situ within the database, and which you can control to selectively include or filter the records you actually want.
+
+On the other hand, this would be much more reasonable:
+
+        let Person = new glsdb('Person');
+        let person = Person.$(id);
+        let props = person.children;
+
+because an individual person record in our particular database only has a small number of first-level properties.
+
+
+### *forEachLeafNode()*
 
 This is an interesting alternative iterator that limits the *nodes* it returns at each iteration step to just those that are Leaf Nodes below the target *node*.
 
 For example, if we applied it to a specific Person record in our database, eg:
 
         let person = new glsdb('Person.1');
-        person._forEachLeafNode(function(leafNode) {
+        person.forEachLeafNode(function(leafNode) {
           // process the leaf node at each iteration step
         });
 
@@ -496,14 +517,14 @@ in other words:
 - Person.1.title
 
 
-Note that we could have used nested *_forEachChildNode()* methods to achieve the same result, but it would be a lot more convoluted and would require us to know the maximum depth of the descendents.  It would also require a significantly larger number of iteration cycles to access all the leaf nodes, eg:
+Note that we could have used nested *forEachChildNode()* methods to achieve the same result, but it would be a lot more convoluted and would require us to know the maximum depth of the descendents.  It would also require a significantly larger number of iteration cycles to access all the leaf nodes, eg:
 
         let person = new glsdb('Person.1');
-        person._forChildNode(function(childNode) {
-          if (childNode._hasChildren) {
-            childNode._forChildNode(function(grandchildNode) {
-              if (grandchildNode._hasChildren) {
-                grandchildNode._forChildNode(function(greatgrandchildNode) {
+        person.forChildNode(function(childNode) {
+          if (childNode.hasChildren) {
+            childNode.forChildNode(function(grandchildNode) {
+              if (grandchildNode.hasChildren) {
+                grandchildNode.forChildNode(function(greatgrandchildNode) {
                   // ...etc
                 });
               }
@@ -519,7 +540,7 @@ Note that we could have used nested *_forEachChildNode()* methods to achieve the
         });
 
    
-In real-world scenarios, you'll find that the *_forEachChild()* method is the one you'll use most frequently, but don't forget the *_forEachLeafNode()* method: in the right circumstances it can be very powerful and efficient.
+In real-world scenarios, you'll find that the *forEachChild()* method is the one you'll use most frequently, but don't forget the *forEachLeafNode()* method: in the right circumstances it can be very powerful and much more efficient.
 
 
 ## Handling Arrays as Nodes
@@ -558,7 +579,7 @@ However, the *favouriteColours* is an Array, and its keys are represented within
 
         favouriteColours[0]
 
-is actually represented in Global Storage as:
+is actually represented in the physical Global Storage as:
 
         favouriteColours[000000]
 
@@ -567,7 +588,7 @@ The reasons for this are:
 - to clearly and unambiguously distinguish array indices from object keys by wrapping the key in square brackets
 - to enforce the correct collating sequence for array elements with the Global Storage by packing the value out to the same length using preceding zeros.
 
-By packing out the array index value with leading zeros, any use of properties such as *_children* or the *_forEachChildNode()* method will return the array elements in the correct sequence.
+By packing out the array index value with leading zeros, any use of properties such as *children* or the *forEachChildNode()* method will return the array elements in the correct sequence.
 
 You'll see that *glsdb* packs out array index values to 6 digits.  This is a default setting that you can modify.  If you know that within your *glsdb* database that no arrays will ever have more than, say, 100 members, you could reduce the packing to just 3 digits, which would add a very small amount of performance improvement to array member handling.
 
@@ -580,23 +601,25 @@ You can do this when first instantiating *glsdb* by adding an options object, eg
 
 Note that if you use this *options* setting, you **MUST** consistently use it **every** time you access the database, to prevent mismatches in the packing used for existing and new array records stored in the database.
 
-Also note that this packing with leading zeros applies to every array within the database.
+Also note that this packing with leading zeros applies to **every** array within the database.  if any need to contain 1000 or more entries, it will result in corrupted data in the database!
+
+The default of 6 packed digits should be a suitable compromise between processing efficiency and likely maximum array size: it will only be problematic if you have arrays that require more than 1 million members.  Remember that, as in the way we handle individual person ids in our example, you can always use a numerically-keyed object instead: these have no limits on the number of entries you can store.
 
 
 ### Identifying Array Nodes and Members
 
-You can determine whether or not a *node* represents an Array by applying its *_isArray* property:
+You can determine whether or not a *node* represents an Array by applying its *isArray* property:
 
         let person = new glsdb.node('Person.1');
         let firstName = person.$('firstName');
-        console.log(firstName._isArray);            // false
+        console.log(firstName.isArray);            // false
         let colours = person.$('favouriteColours');
-        console.log(colours._isArray);              // true        
+        console.log(colours.isArray);              // true        
 
 You can also determine whether or not a *node* represents the member of an Array by applying its *isArrayMember* property:
 
         let colour0 = new glsdb.node('Person.1.favouriteColours[0]');
-        console.log(colour0._isArrayMember);        // true
+        console.log(colour0.isArrayMember);        // true
 
 
 ### Accessing Array Members
@@ -616,17 +639,17 @@ To access members of an Array *node*, you can use the corresponding *_(index)* m
 
 and to get its value:
 
-        console.log(firstColour._value);   // blue
+        console.log(firstColour.value);   // blue
 
 
 You may find it interesting to examine such an Array element *node*:
 
-        firstColour._keys    //  [ 'Person', 1, 'favouriteColour', '[000000]' ]
-        firstColour._key     //  [000000]
-        firstColour._path    //  Person.1.favouriteColour[0]
+        firstColour.keys    //  [ 'Person', 1, 'favouriteColour', '[000000]' ]
+        firstColour.key     //  [000000]
+        firstColour.path    //  Person.1.favouriteColour[0]
 
 
-So you can see how the *_key*  and *_keys* properties reflect the physical storage, but *_path* reflects its logical representation.
+So you can see how the *key*  and *keys* properties reflect the physical storage, but *path* reflects its logical representation.
 
 So you could also use the following to access the first colour element *node* directly:
 
@@ -640,44 +663,44 @@ Using the *favouriteColour* *node* as an example, since this is an Array Node:
 
         let colours = new glsdb.node('Person.1.favouriteColours');
 
-We can find out how many members there are in the Array *node* using the *_length* property:
+We can find out how many members there are in the Array *node* using the *length* property:
 
-        console.log(colours._length);    // 2
-
-
-(Note: the *_length* property can be used for any *node*, whether or not it's an Array, to tell you the number of ChildNodes it currently has).
+        console.log(colours.length);    // 2
 
 
-We can get the value for a specific index within the persistent array using the *_at()* method, eg:
+(Note: the *length* property can be used for any *node*, whether or not it's an Array, to tell you the number of ChildNodes it currently has).
 
-        console.log(colours._at(1));    // green
 
-You can remove the first and/or last values from the persistent Array and return them using *_shift()* and *_pop()*:
+We can get the value for a specific index within the persistent array using the *at()* method, eg:
 
-        let firstColour = colours._shift();
+        console.log(colours.at(1));    // green
 
-        let lastColour = colours._pop();
+You can remove the first and/or last values from the persistent Array and return them using *shift()* and *pop()*:
 
-You can determine whether or not the Array contains a particular value using *_includes()*, or find the index of a member matching a value using *_indexOf()*.
+        let firstColour = colours.shift();
+
+        let lastColour = colours.pop();
+
+You can determine whether or not the Array contains a particular value using *includes()*, or find the index of a member matching a value using *indexOf()*.
 
 In all cases, the arguments of these methods mirror those of their equivalents for standard in-memory JavaScript Arrays.
 
 
 #### Setting Array Members
 
-You've already seen that if you use the *_document setter*, any JavaScript arrays will be automatically saved in the correct way.
+You've already seen that if you use the *document setter*, any JavaScript arrays will be automatically saved in the correct way.
 
 You can also set array members directly in-situ within the database, eg let's add a third favourite colour to our example database person record:
 
         let person = new glsdb.node('Person.1');
         let favouriteColour = person.$('favouriteColour');
-        favouriteColour._(2)._value = 'red';
+        favouriteColour._(2).value = 'red';
 
 Of course we could also do this instead:
 
         let favouriteColour = new glsdb.node('Person.1.favouriteColour');
         favouriteColour.delete();
-        favouriteColour._document = ['blue', 'green', 'red'];
+        favouriteColour.document = ['blue', 'green', 'red'];
 
 This would replace the existing *favouriteColour* Array values with a new set.
 
@@ -685,22 +708,22 @@ Once again, these are fairly verbose and cumbersome, so you can use the methods 
 
         let colours = new glsdb.node('Person.1.favouriteColours');
 
-Then we can append new values using the *_push()* method:
+Then we can append new values using the *push()* method:
 
-        colours._push('orange');
+        colours.push('orange');
 
 or add a new value to the start of the Array *node*:
 
-        colours._unshift('yellow');
+        colours.unshift('yellow');
 
-We can insert one or more new members into the Array using *_splice()*, eg:
+We can insert one or more new members into the Array using *splice()*, eg:
 
-        colours._splice(1, 2, 'orange');
+        colours.splice(1, 2, 'orange');
 
-or concatenate new arrays into the existing persistent one using *_concat()*, eg:
+or concatenate new arrays into the existing persistent one using *concat()*, eg:
 
         let newArr = ['black', 'white'];
-        colours._concat(newArr);
+        colours.concat(newArr);
 
 
 ## Locking Records
@@ -714,9 +737,9 @@ A simple mechanism provided by Global Storage databases is the means to Lock a s
 
 Provided you are using a module library such as *QOper8-cp*, then this blocking behaviour will not matter, since each user's logic will be running in its own private Child Process or Worker Thread container without any concurrency to worry about.  The main Node.js thread will be running asynchronously and will be unaffected by any Locks taking place in Workers.
 
-To lock a *node*, simply invoke its *_lock()* method, eg:
+To lock a *node*, simply invoke its *lock()* method, eg:
 
-        let success = person._lock(5);  // 5 second timeout
+        let success = person.lock(5);  // 5 second timeout
         if (!success) {
           // failed to set the lock on the person node
         }
@@ -726,6 +749,6 @@ To lock a *node*, simply invoke its *_lock()* method, eg:
 
 To release a lock:
 
-        person._unlock();
+        person.unlock();
 
 

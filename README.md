@@ -236,9 +236,9 @@ Broadly-speaking, there are three sets of APIs:
 
 - a generic set that are supported across all compatible databases, and which abstract the so-called *nodes* within a Global Storage database;
 
-- a higher-level abstraction derived from the generic APIs, using a Proxy Object;
+- a higher-level abstraction derived from the generic APIs, using a Proxy Object, which provides a very close approximation to having what appear to be persistent JavaScript Objects;
 
-- a set of APIs that are available for IRIS and Cache only, which abstract native IRIS and Cache persistent objects as JavaScript Objects.
+- a set of APIs that are available for IRIS and Cache only, which abstract native IRIS and Cache Persistent Objects as JavaScript Objects.
 
 
 ### The Generic Global Storage APIs
@@ -302,73 +302,74 @@ A *glsdb node* provides you with a set of properties and methods with which you 
 
 Importantly, the *node* Object does not actually have to physically exist within the database at the time you instantiate it: ie it can be a notional Global Storage node that you subsequently populate or use as the starting point for navigation or exploration.
 
-Let's now go through the properties and methods for the *glsdb node*.  Note that all the *glsdb*-provided properties and methods deliberately have an underscore ('_') or dollar ('$') prefix, to distinguish them from the physical keys of any of its potential persistent child *nodes*.
+Let's now go through the properties and methods for the *glsdb node*.
+
 
 #### *node* Properties
 
 - Properties relating to the *node* itself:
 
-  - *_path*: (Read Only) returns an array representing the full name and key path hierarchy for the *node*
+  - *path*: (Read Only) returns an array representing the full name and key path hierarchy for the *node*
 
-  - *_name*: (Read Only) returns the Global Storage name, ie the first member of the *path* array
+  - *name*: (Read Only) returns the Global Storage name, ie the first member of the *path* array
 
-  - *_keys*: (Read Only) returns an array representing the key path hierachy for the *node*, ie the second to last members of the *path* array
+  - *keys*: (Read Only) returns an array representing the key path hierachy for the *node*, ie the second to last members of the *path* array
 
-  - *_key*: (Read Only) returns the key for the specific *node*, ie the last one in the *keys* array
+  - *key*: (Read Only) returns the key for the specific *node*, ie the last one in the *keys* array
 
-  - *_exists*: (Read Only) returns *true* if the *node* physically exists within the database; *false* if not
+  - *exists*: (Read Only) returns *true* if the *node* physically exists within the database; *false* if not
 
-  - *_hasValue*: (Read Only) returns *true* if the *node* physically exists within the database and has a value stored against it; *false* if not
+  - *hasValue*: (Read Only) returns *true* if the *node* physically exists within the database and has a value stored against it; *false* if not
 
-  - *_hasChildren*: (Read Only) returns *true* if the *node* has Child *node*s below it within the hierarchical structure; *false* if not
+  - *hasChildren*: (Read Only) returns *true* if the *node* has Child *node*s below it within the hierarchical structure; *false* if not
 
-  - *_isLeafNode*: (Read Only) returns *true* if the *node* has a value and is therefore a leaf node within the hierarchical structure; *false* if not
+  - *isLeafNode*: (Read Only) returns *true* if the *node* has a value and is therefore a leaf node within the hierarchical structure; *false* if not
 
-  - *_isArray*: (Read Only) returns *true* if the *node* represents an Array; *false* if not
+  - *isArray*: (Read Only) returns *true* if the *node* represents an Array; *false* if not
 
-  - *_isArrayMember*: (Read Only) returns *true* if the *node* represents a member of an Array; *false* if not
+  - *isArrayMember*: (Read Only) returns *true* if the *node* represents a member of an Array; *false* if not
 
 
 - Properties relating to other *nodes* that may surround it:
 
-  - *_parent*: (Read Only) returns an instance of a *node* object that represents the current *node*'s parent within the hiearchy of nodes.  If the current node is the top-level node, it returns an undefined value;
+  - *parent*: (Read Only) returns an instance of a *node* object that represents the current *node*'s parent within the hiearchy of nodes.  If the current node is the top-level node, it returns an undefined value;
 
-  - *_firstChild*: (Read Only) if the *node* has Child *node*s, this returns an instance of a *node* object that represents the current *node*'s first Child *node* in collating sequence
+  - *firstChild*: (Read Only) if the *node* has Child *node*s, this returns an instance of a *node* object that represents the current *node*'s first Child *node* in collating sequence
 
-  - *_lastChild*: (Read Only) if the *node* has Child *node*s, this returns an instance of a *node* object that represents the current *node*'s last Child *node* in collating sequence
+  - *lastChild*: (Read Only) if the *node* has Child *node*s, this returns an instance of a *node* object that represents the current *node*'s last Child *node* in collating sequence
 
-  - *_nextSibling*: (Read Only) if the *node* has sibling *node*s, this returns an instance of a *node* object that represents the current *node*'s next sibling *node* in collating sequence
+  - *nextSibling*: (Read Only) if the *node* has sibling *node*s, this returns an instance of a *node* object that represents the current *node*'s next sibling *node* in collating sequence
 
-  - *_previousSibling*: (Read Only) if the *node* has sibling *node*s, this returns an instance of a *node* object that represents the current *node*'s previous sibling *node* in collating sequence
+  - *previousSibling*: (Read Only) if the *node* has sibling *node*s, this returns an instance of a *node* object that represents the current *node*'s previous sibling *node* in collating sequence
 
-  - *_childNodes*: (Read Only) if the *node* has Child *node*s, this returns an array of instances of *node* objects, representing the complete set of the current *node*'s Child *node*s, ordered in collating sequence
+  - *childNodes*: (Read Only) if the *node* has Child *node*s, this returns an array of instances of *node* objects, representing the complete set of the current *node*'s Child *node*s, ordered in collating sequence
 
-  - *_children*: (Read Only) Identical to *childNodes* above
+  - *children*: (Read Only) Identical to *childNodes* above
 
-  - *_leafNodes*: (Read Only) if the *node* has Child *node*s, this returns an array of instances of *node* objects, representing the complete set of the current *node*'s Child *node*s that are leaf nodes (ie that have a value and have no children)
+  - *leafNodes*: (Read Only) if the *node* has Child *node*s, this returns an array of instances of *node* objects, representing the complete set of the current *node*'s Child *node*s that are leaf nodes (ie that have a value and have no children)
 
-  - *_length*: (Read Only) returns the number of Child Nodes belonging to the current *node*.
+  - *length*: (Read Only) returns the number of Child Nodes belonging to the current *node*.
 
 - Properties that access the value(s) of *nodes*
 
-  - *_value*: (Read/write) gets or sets the value (if any) of the *node*.  Returns an empty string if the *node* does not have a value.
+  - *value*: (Read/write) gets or sets the value (if any) of the *node*.  Returns an empty string if the *node* does not have a value.
 
-  - *_document*: (Read) returns a JavaScript object/JSON sructure representing the *node*'s descendent *node*s
+  - *document*: (Read) returns a JavaScript object/JSON sructure representing the *node*'s descendent *node*s
 
-  - *_document*: (Write) merges a JavaScript object into the current *node* to create a corresponding set of descendent *node*s.  Note that this is non-destructive: any existing descendent *node*s will be left intact (though may be overwritten if the incoming object also contains them)
+  - *document*: (Write) merges a JavaScript object into the current *node* to create a corresponding set of descendent *node*s.  Note that this is non-destructive: any existing descendent *node*s will be left intact (though may be overwritten if the incoming object also contains them)
 
 
 #### *node* Methods
 
-- *_delete()*: deletes the *node* and any/all of its descendent *node*s.  (No arguments)
+- *delete()*: deletes the *node* and any/all of its descendent *node*s.  (No arguments)
 
-- *_increment(amount)*: increments the value of the *node* by the specified integer amount (1 if not specified).  Note that if the node currently does not exist, or if it does exist but has no value or a non-integer value, it is set to the value specified by the *amount* argument.
+- *increment(amount)*: increments the value of the *node* by the specified integer amount (1 if not specified).  Note that if the node currently does not exist, or if it does exist but has no value or a non-integer value, it is set to the value specified by the *amount* argument.
 
 - *$(key_value)*: returns an instance of the *node*'s Child *node* with the specified *key_value*. (Note that the specified Child *node* may or may not currently exist in the database)
 
 - *_(array_index)*: This method is used to access Array *node* members.  Array *node*s use a special key structure/syntax behind the scenes, but the *_()* method allows you to access its members as if they were JavaScript Array members (see later).  Returns an instance of the specified member of the Array *node*.
 
-_ *_forEachChildNode(options, callback)*: iterates through all or specified Child *nodes* of the current *node*.  Arguments are:
+- *forEachChildNode(options, callback)*: iterates through all or specified Child *nodes* of the current *node*.  Arguments are:
 
   - *options*: an optional object that controls or limits the iteration via the following properties:
 
@@ -385,7 +386,7 @@ _ *_forEachChildNode(options, callback)*: iterates through all or specified Chil
   Note that if no options are required, you can invoke the method using *forEachChildNode(callback)*
 
 
-_ *_forEachLeafNode(options, callback)*: iterates through all or specified descendent Leaf *nodes* of the current *node*.  Arguments are:
+- *forEachLeafNode(options, callback)*: iterates through all or specified descendent Leaf *nodes* of the current *node*.  Arguments are:
 
   - *options*: an optional object that controls or limits the iteration via the following properties:
 
@@ -396,26 +397,26 @@ _ *_forEachLeafNode(options, callback)*: iterates through all or specified desce
   Note that if no options are required, you can invoke the method using *forEachLeafNode(callback)*
 
 
-- *_lock(timeout)*: Sets a Lock on the current *node*, which, if successful, means that any other user/process trying to Lock that same *node* will be blocked and its processing will be suspended until the Lock is released.  A timeout (in seconds) can be optionally specified, in which case the *lock()* method will return *true* if it was successful in setting the Lock, or *false* if it was unable to set the Lock within the specified time.
+- *lock(timeout)*: Sets a Lock on the current *node*, which, if successful, means that any other user/process trying to Lock that same *node* will be blocked and its processing will be suspended until the Lock is released.  A timeout (in seconds) can be optionally specified, in which case the *lock()* method will return *true* if it was successful in setting the Lock, or *false* if it was unable to set the Lock within the specified time.
 
-- *_unlock()*: Unlocks the current *node*.  If there are any other users/processes previously blocked by this Lock, then one will now be granted the Lock (any others will continue to be blocked).
+- *unlock()*: Unlocks the current *node*.  If there are any other users/processes previously blocked by this Lock, then one will now be granted the Lock (any others will continue to be blocked).
 
 
 #### *node* Methods Specific to Array Nodes
 
 For *node*s that represent persistent Arrays, *glsdb* provides a number of convenience methods that emulate the behaviour of and share the same arguments as their JavaScript equivalents:
 
-- *_at(index)*: returns the value of the Array element with the specified index.  Negative numbers return elements from the end of the persistent Array
+- *at(index)*: returns the value of the Array element with the specified index.  Negative numbers return elements from the end of the persistent Array
 
-- *_concat(arr, [arr2...])*: Persistently concatenates the specified array(s) to the existing persistent one, and returns a copy of the concatenated arrays.
+- *concat(arr, [arr2...])*: Persistently concatenates the specified array(s) to the existing persistent one, and returns a copy of the concatenated arrays.
 
-- *_includes(value)*: Returns *true* if at least one of the members of the persistent array is equal to the the specified value.
+- *includes(value)*: Returns *true* if at least one of the members of the persistent array is equal to the the specified value.
 
-- *_indexOf(value [, fromIndex])*: Returns the index value of the first members of the persistent array that is equal to the the specified value, otherwise returns -1.
+- *indexOf(value [, fromIndex])*: Returns the index value of the first members of the persistent array that is equal to the the specified value, otherwise returns -1.
 
-- *_pop()*: Removes the last member of the persistent Array and returns its value.
+- *pop()*: Removes the last member of the persistent Array and returns its value.
 
-- *_push(value)*: Appends the specified value as a new last member of the persistent Array
+- *push(value)*: Appends the specified value as a new last member of the persistent Array
 
 - *shift()*: Removes the first member of the persistent Array and returns its value.
 
@@ -423,7 +424,7 @@ For *node*s that represent persistent Arrays, *glsdb* provides a number of conve
 
 - *splice()*: Adds or changes the contents of the persistent Array.
 
-- *_unshift(value)*: Prepends the specified value as the new first member of the persistent Array and adjusts the indices of the existing members appropriately.
+- *unshift(value)*: Prepends the specified value as the new first member of the persistent Array and adjusts the indices of the existing members appropriately.
 
 
 #### Using the Generic Global Storage APIs
