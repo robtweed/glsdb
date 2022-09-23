@@ -104,7 +104,7 @@ RUN mkdir /tmp/tmp \
   && chmod +x ydbinstall.sh \
   && ./ydbinstall.sh --utf8 default --verbose --force-install \
   && export ydb_gbldir=/opt/yottadb/yottadb.gld \
-  && /usr/local/lib/yottadb/r134/mumps -run ^GDE < /opt/fastify-qoper8/gde.txt \
+  && /usr/local/lib/yottadb/r134/mumps -run ^GDE < /opt/glsdb/gde.txt \
   && /usr/local/lib/yottadb/r134/mupip create
 
 # Install and configure the network mgsi interface code to allow
