@@ -397,26 +397,31 @@ class glsDB {
             //console.log(Reflect.getOwnPropertyDescriptor(target, 'length'));
             //console.log('** ownKeys: ' + JSON.stringify(target));
             let keys = node.properties;
-            if (node.isArray) keys.push('length');
-            //console.log('keys:');
-            //console.log(keys);
+            if (node.isArray) return Reflect.ownKeys(keys);
             return keys;
           },
 
           getOwnPropertyDescriptor(target, prop) { // called for every property
             //console.log('getOwnPropDesc: ' + prop);
-            let obj = {
-              enumerable: true,
-              configurable: true
-              /* ...other flags, probable "value:..." */
-            };
-            if (node.isArray && prop === 'length') obj = {
+            if (node.isArray && prop === 'length') return {
               value: 0,
               writable: true,
               enumerable: false,
               configurable: false
+            };
+            let obj = {
+              enumerable: true,
+              configurable: true,
+              value: node.$(prop).value
+            };
+            if (!node.isArray && !node.$(prop).exists) {
+              return Reflect.getOwnPropertyDescriptor({});
             }
             return obj;
+          },
+
+          has(target) {
+            //console.log('** has: ' + target);
           },
 
           deleteProperty(target, prop) {
@@ -427,6 +432,19 @@ class glsDB {
           get(target, prop, receiver) {
             //console.log('** get proxy prop = ');
             //console.log(prop);
+            if (typeof prop === 'symbol') {
+              //console.log('is a symbol!');
+              let symbolType = prop.toString();
+              if (symbolType === 'Symbol(Symbol.toPrimitive)') {
+                let value = node.value;
+                if (value === '' || typeof value === 'object') value = 0;
+                return value[Symbol.toPrimitive];
+              }
+              if (symbolType === 'Symbol(Symbol.iterator)') {
+                let arr = node.properties;
+                return arr[Symbol.iterator].bind(arr);
+              }
+            }
 
             if (prop === '_node') {
               return node;
@@ -434,6 +452,12 @@ class glsDB {
 
             if (prop === '_get') {
               return node.document;
+            }
+
+            if (prop === 'valueOf') {
+              return function() {
+                return node.value;
+              }
             }
 
             // if _{prop} is a property or function of the proxied node, return/use it
@@ -525,6 +549,7 @@ class glsDB {
         }
       }
       get value() {
+        if (!this.exists) return '';
         if (!this.isLeafNode) return this.document;
 
         let value = this.#globalNode.get();
@@ -865,6 +890,9 @@ class glsDB {
       }
 
       get properties() {
+        if (this.isArray) {
+          return this.document;
+        }
         let props = [];
         this.forEachChildNode(function(childNode) {
           props.push(getArrayValue(childNode.key).toString());

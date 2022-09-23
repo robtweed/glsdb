@@ -329,6 +329,8 @@ Let's now go through the properties and methods for the *glsdb node*.
 
   - *isArrayMember*: (Read Only) returns *true* if the *node* represents a member of an Array; *false* if not
 
+  - *proxy*: returns a Proxy object that provides an even higher-level abstraction for the *node*.  For more details, see this [Tutorial](./PROXY_API_TUTORIAL.md)
+
 
 - Properties relating to other *nodes* that may surround it:
 
@@ -435,10 +437,39 @@ Jump over to the [Tutorial on using the generic Global Storage APIs](./BASIC_API
 
 ### The Global Storage Proxy API
 
+You can use a *node*'s *proxy* property to obtain a Proxy Object that provides an even higher-level abstraction of a *node*, to the extent that you effectively have an Object that is actually directly accessing and modifying the physical representation of that Object in your Global Storage database.  For example:
+
+        let person = new glsdb('Person.1').proxy;
+
+When using the Proxy, references you make it its properties are trapped and mapped via the Proxy's handler methods to the corresponding Global Storage records in the database.  In effect, it's as if you have a JavaScript object whose properties map directly to the persistent equivalent within your Global Storage database, and as such, you use and manipulate it almost as if it was a standard JavaScript Object.
+
+When using the Proxy:
+
+- its properties are directly mapped to corresponding child *node*s
+- any properties that are defined as Arrays can make use of any JavaScript Array methods, but they are accessing the persistent database version of the Array
+- you can delete a child *node* in the database using *delete proxy_obj.property* syntax
+- you can iterate through the Proxy's child *nodes* using, for example, a *for...in* loop, but you're actually accessing an array created from the *node*'s Child Nodes.
+
+At any point, you can also obtain the original *node* object represented by the Proxy by using its *_node* property:
+
+         let node = proxy._node;
+
+You also have access to the underlying *node*'s basic *glsdb* properties and methods, simply by adding an underscore (_) to the property or method name, eg:
+
+        console.log(person._exists);  // true
+
+        let Person = person._parent.proxy;
+
+        let record = person._document;   // returns an in-memory object representing the saved person record
+
+        person._forEachChildNode(function() { // iterate through the child nodes }
+
+Jump over to the [Tutorial on using the Proxied Global Storage API](./PROXY_API_TUTORIAL.md) to learn more.
+
 
 ### The IRIS/Cache-Specific API
 
-
+... To follow
 
 ## License
 
