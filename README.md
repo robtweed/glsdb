@@ -27,8 +27,6 @@ When using IRIS, *glsdb* further abstracts IRIS's Persistent Objects via a JavaS
 - [Berkeley DB](https://www.oracle.com/uk/database/technologies/related/berkeleydb.html)
 - [LMDB](http://www.lmdb.tech/doc/)
 
-*glsdb* can also be used with the Redis Database, using the Global Storage emulation included with this repository.
-
 
 ## Installing *glsdb*
 
@@ -77,7 +75,6 @@ It is therefore recommended that *glsdb* is used in conjunction with a module su
 - *cache* the Cache database from InterSystems (now a legacy product)
 - *bdb*: Berkeley DB
 - *lmdb*: the LMDB database
-- *redis*: the Redis database
 
 *glsdb* will automatically import the appropriate interface module for your selected database type.
 
@@ -88,7 +85,7 @@ It is therefore recommended that *glsdb* is used in conjunction with a module su
 
 The contents of the *options* object will depend on the database type you have selected to use and the type of connection you want to make to the database.
 
-With the exception of Redis, you can connect to a database in one of two ways:
+If you use YottaDB, IRIS or Cache, you can connect to the database in one of two ways:
 
 - the more conventional way, via a network connection;
 
@@ -100,7 +97,15 @@ If you choose an API connection, both Node.js and the database must reside on th
 
 Note that the type of connection you choose will make no difference to the syntax of the *glsdb* APIs.
 
+
+If you use Berkeley DB or LMDB, then, because these are embedded databases, the only available option is an API/in-process connection.
+
+
 ### Database Opening Options
+
+Each database has its own specific conventions and requirements for connection.  These are detailed below.
+
+However, once opened, they will then behave identically in *glsdb*.
 
 #### IRIS and Cache:
 
@@ -129,7 +134,7 @@ the [*mgsi*](https://github.com/chrisemunt/mg-dbx#Threads) superserver software.
           username: "_SYSTEM",
           password: "xxxxxxx",
           namespace: "USER"
-        }
+        });
 
 
 - API Connection:
@@ -153,7 +158,7 @@ the [*mgsi*](https://github.com/chrisemunt/mg-dbx#Threads) superserver software.
           username: "_SYSTEM",
           password: "xxxxxxx",
           namespace: "USER"
-        }
+        });
 
 
 #### YottaDB:
@@ -177,7 +182,7 @@ the [*mgsi*](https://github.com/chrisemunt/mg-dbx#installing-the-m-support-routi
         glsdb.open({
           host: '172.17.0.2',
           tcp_port: 7041
-        }
+        });
 
 
 - API Connection:
@@ -211,7 +216,48 @@ on your YottaDB database system.
             ydb_routines: '/opt/fastify-qoper8/m /usr/local/lib/yottadb/r134/libyottadbutil.so',
             ydb_ci: '/usr/local/lib/yottadb/r134/zmgsi.ci'
           }
-        };
+        });
+
+
+#### Berkeley DB:
+
+  You must specify:
+
+  - *db_library*: the path to the Berkeley DB shared object or dll
+
+  - *db_file*: the path to the database file you want to use (it is created if it does not already exist)
+
+  - *env_dir*: the path to your Berkeley DB installation
+
+  - *key_type*: must be set to *m* for *glsdb*.
+
+  For example:
+
+        glsdb.open({
+          db_library: "/usr/local/BerkeleyDB.18.1/lib/libdb.so",
+          db_file: "/opt/bdb/my_bdb_database.db",
+          env_dir: "/opt/bdb",
+          key_type: "m"
+        });
+
+
+#### LMDB:
+
+  You must specify:
+
+  - *db_library*: the path to the LMDB shared object or dll
+
+  - *env_dir*: the path to your LMDB installation
+
+  - *key_type*: must be set to *m* for *glsdb*.
+
+  For example:
+
+        glsdb.open({
+          db_library: "liblmdb.so",
+          env_dir: "/opt/lmdb",
+          key_type: "m"
+        });
 
 
 
@@ -470,6 +516,193 @@ Jump over to the [Tutorial on using the Proxied Global Storage API](./PROXY_API_
 ### The IRIS/Cache-Specific API
 
 ... To follow
+
+
+## Demonstration Docker Containers
+
+This *glsdb* repository includes a set of Dockerfiles for creating a quick and easy Containers in which you can try everything out using three different supported databases:
+
+- YottaDB
+- Berkeley DB
+- LMDB
+
+They each include the exact same demonstration script, with the only exception being the database connection options.
+
+
+### YottaDB Container
+
+It includes a copy of Node.js and a pre-installed, pre-configured copy of the YottaDB database.
+
+### Building the Container
+
+You'll need to have Docker installed on your computer before carrying out the steps below.
+
+Clone the repository in a folder on your computer:
+
+        git clone https://github.com/robtweed/glsdb
+
+Then navigate to the folder containing the Dockerfile and supporting files:
+
+        cd glsdb/examples/docker-demo-ydb
+
+You'll see a handy reminder file named *start.txt* that contains the commands for building and running the container.
+
+
+To build the container:
+
+        docker build -t glsdb .
+
+
+### Start the COntainer
+
+Once the build has completed, you can start it at any time thereafter using:
+
+        docker run --name glsdb --rm -it glsdb
+
+
+### Running the *glsdb* Demo
+
+
+You'll find yourself in the */opt/glsdb* folder of the Container which will contain a Node.js script file named *demo.mjs*.
+
+This demo script exercises a number of *glsdb* APIs, in particular the Proxied ones.  Take a look at its contents.
+
+
+Then run it:
+
+      node demo.mjs
+
+
+### Take a Look at the Global Storage Database
+
+After the demo has run, you can take a look at the database that it's created in the Container's YottaDB database.
+
+First, open the YottaDB shell:
+
+      ./ydb
+
+      YDB> 
+
+Then type:
+
+      YDB> zwr ^Person
+
+You should see a listing of the database contents for the *Person* Global.
+
+Each time you run the script it will add another identical person record using the next generated Id value.
+
+
+To close the YottaDB Shell:
+
+      YDB> h
+
+
+### Exit and Shut Down the COntainer
+
+Type:
+
+      exit
+
+
+### Berkeley DB Container
+
+It includes a copy of Node.js and a pre-installed copy of the Berkeley DB database.
+
+### Building the Container
+
+You'll need to have Docker installed on your computer before carrying out the steps below.
+
+Clone the repository in a folder on your computer:
+
+        git clone https://github.com/robtweed/glsdb
+
+Then navigate to the folder containing the Dockerfile and supporting files:
+
+        cd glsdb/examples/docker-demo-bdb
+
+You'll see a handy reminder file named *start.txt* that contains the commands for building and running the container.
+
+
+To build the container:
+
+        docker build -t glsdb-bdb .
+
+
+### Start the COntainer
+
+Once the build has completed, you can start it at any time thereafter using:
+
+        docker run --name glsdb --rm -it glsdb-bdb
+
+
+### Running the *glsdb* Demo
+
+
+You'll find yourself in the */opt/glsdb* folder of the Container which will contain a Node.js script file named *demo.mjs*.
+
+This demo script exercises a number of *glsdb* APIs, in particular the Proxied ones.  Take a look at its contents.
+
+
+Then run it:
+
+      node demo.mjs
+
+### Exit and Shut Down the COntainer
+
+Type:
+
+      exit
+
+
+### LMDB Container
+
+It includes a copy of Node.js and a pre-installed copy of the LMDB database.
+
+### Building the Container
+
+You'll need to have Docker installed on your computer before carrying out the steps below.
+
+Clone the repository in a folder on your computer:
+
+        git clone https://github.com/robtweed/glsdb
+
+Then navigate to the folder containing the Dockerfile and supporting files:
+
+        cd glsdb/examples/docker-demo-lmdb
+
+You'll see a handy reminder file named *start.txt* that contains the commands for building and running the container.
+
+
+To build the container:
+
+        docker build -t glsdb-lmdb .
+
+
+### Start the COntainer
+
+Once the build has completed, you can start it at any time thereafter using:
+
+        docker run --name glsdb --rm -it glsdb-lmdb
+
+
+### Running the *glsdb* Demo
+
+
+You'll find yourself in the */opt/glsdb* folder of the Container which will contain a Node.js script file named *demo.mjs*.
+
+This demo script exercises a number of *glsdb* APIs, in particular the Proxied ones.  Take a look at its contents.
+
+
+Then run it:
+
+      node demo.mjs
+
+### Exit and Shut Down the COntainer
+
+Type:
+
+      exit
+
 
 ## License
 

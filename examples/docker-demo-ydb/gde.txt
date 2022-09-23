@@ -1,0 +1,2 @@
+change -segment default -file=/opt/yottadb/mumps.dat
+exit
