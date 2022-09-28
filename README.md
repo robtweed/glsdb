@@ -52,6 +52,8 @@ It is therefore recommended that *glsdb* is used in conjunction with a module su
 [QOper8-wt*](https://github.com/robtweed/qoper8-wt) or 
 [QOper8-cp](https://github.com/robtweed/qoper8-cp), where individual messages are handled in isolation within a Worker Thread or Child Process, resulting in no concurrency issues.
 
+[This tutorial](./FASTIFY.md) explains how you can use *glsdb* and the *QOper8* modules in conjunction with the Fastify Web Server for Node.js, allowing you to use a Global Storage database as part of a high-performance, high-scalability REST-based back-end service.
+
 
 ## Starting and Configuring *glsdb*
 
@@ -515,8 +517,64 @@ Jump over to the [Tutorial on using the Proxied Global Storage API](./PROXY_API_
 
 ### The IRIS/Cache-Specific API
 
-... To follow
+*glsdb* adds a Proxy-based layer of abstraction on top of the IRIS/Cache Object APIs provided by the *mg-dbx* interface.
 
+Note that these APIs are only available if you use *glsdb* with the IRIS or Cache databases.
+
+Having made a connection to the database (either an in-process API connection or a networked connection) as normal, you can then create a Proxy Object that corresponds to an instance of an IRIS/Cache Class:
+
+- first connect to the IRIS/Cache Class you want to use, for example:
+
+        let Person = glsdb.irisClass('Person');
+
+
+- then either:
+
+  - create an instance of an existing member of the Class using an IRIS/Cache OID , eg:
+
+        let person = Person(10);
+
+  - or create an instance of a new (empty) member:
+
+        let person = Person();
+
+
+You now have a Proxy Object whose methods and properties directly access/use those of the corresponding IRIS/Cache persistent one.
+
+So, for example, if it was an existing *person* instance, we could do things like:
+
+        console.log(person.Name);
+        console.log(person.DateOfBirth);
+
+
+You can also chain references where appropriate, eg:
+
+        console.log(employee.Company.Name);
+
+In all cases, the property values are being directly returned from the corresponding persistent IRIS/Cache objects.  It's as if the JavaScript Object you're using is actually a persistent, on-disk one!
+
+
+To update an Object, you can use its *_save()* method (which invokes the %Save() method of the corresponding IRIS/Cache persistent object).
+
+You can inspect the properties and methods of the object:
+
+        console.log(person._properties);
+        console.log(person._methods);
+
+*glsdb* will automatically recognise those properties and methods when you chain them together, and apply them appropriately .
+
+
+*glsdb* also provides a handy *_set* method that allows you to populate and save a new instance of a Class in one single command, eg:
+
+        person._set({
+          Name: 'Rob',
+          City: 'Redhill',
+          Country: 'UK'
+        });
+
+
+
+----
 
 ## Demonstration Docker Containers
 

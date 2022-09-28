@@ -23,7 +23,7 @@
  |  limitations under the License.                                           |
  ----------------------------------------------------------------------------
 
-22 September 2022
+28 September 2022
 
  */
 
@@ -164,6 +164,8 @@ class glsDB {
     const mglobal = db_mod.mglobal;
     let DB = new dbx();
 
+    //this.db = DB;
+
     let glsdb = this;
   
     this.open = function(params) {
@@ -301,9 +303,6 @@ class glsDB {
 
       constructor(path) {
 
-        //console.log('#node constructor with path = ');
-        //console.log(path);
-
         function unpadded(arr) {
           let keys = [...arr];
           for (let i = 0; i < keys.length; i++) {
@@ -351,7 +350,6 @@ class glsDB {
           return path;
         }
 
-        //console.log('**** path = ' + JSON.stringify(path));
         let keys = path;
         if (!Array.isArray(path)) {
           //console.log('**** path is a string ***');
@@ -1096,21 +1094,90 @@ class glsDB {
 
       this.irisClassExists = function(clsName) {
         let packageName = glsdb.classMethod(clsName, "%PackageName");
-        if (packageName === '') return false;
+        if (packageName === '') {
+          packageName = clsName.split('.')[0];
+        }
         let className = glsdb.classMethod(clsName, "%ClassName");
+        //console.log('className: ' + className);
         if (className === '') return false;
         let fqn = packageName + '.' + className;
         return (glsdb.classMethod('%Dictionary.ClassDefinition', "%ExistsId", fqn) === '1');
       }
 
+      this.irisProxy = function(mclass, parentClass) {
+
+        let handler = {
+
+          get(target, prop, receiver) {
+            //console.log('** get proxy prop = ' + prop);
+
+            if (prop === '_mclass') return mclass;
+            if (prop === '_this') return parentClass;
+            if (prop === '_properties') return parentClass._properties;
+            if (prop === '_methods') return parentClass._methods;
+            if (prop === '_set') {
+              return function(...args) {
+                return parentClass.set(...args);
+              }
+            }
+
+            if (prop === '_save') {
+              return function(...args) {
+                args.forEach(function(arg, index) {
+                  if (typeof arg === 'object' && arg._mclass) args[index] = arg._mclass;
+                });
+                return mclass.method('%Save', ...args);
+              };
+            }
+
+            if (parentClass._methods[prop]) {
+              //console.log('**** method ' + prop);
+              return function(...args) {
+                args.forEach(function(arg, index) {
+                  if (typeof arg === 'object' && arg._mclass) args[index] = arg._mclass;
+                });
+                return mclass.method(prop, ...args);
+              };
+            }
+  
+            if (parentClass._properties[prop]) {
+              let property = mclass.getproperty(prop);
+              //console.log('*** property = ');
+              //console.log(property);
+
+              if (typeof property === 'object' && property.method) {
+                let fqn = property.method('%ClassName', 1);
+                //console.log(fqn);
+                let cls = glsdb.irisClass(fqn);
+                let instance = cls(property);
+                //console.log(222222);
+                //console.log(instance);
+                return instance;
+              }
+              return property;
+            }
+
+            if (target[prop]) {
+              return target[prop];
+            }
+            return '';
+          },
+
+          set(target, prop, value) {
+            //console.log('set prop = ' + prop);
+            if (parentClass._properties[prop]) {
+              mclass.setproperty(prop, value);
+            }
+            return true;
+          }
+        };
+        return new Proxy({}, handler);
+      };
+
       this.irisClass = function(clsName) {
-        let packageName = glsdb.classMethod(clsName, "%PackageName");
-        //console.log('packageName = ' + packageName);
-        if (packageName === '') return null;
-        let className = glsdb.classMethod(clsName, "%ClassName");
-        //console.log('className = ' + className);
-        if (className === '') return null;
-        let fqn = packageName + '.' + className;
+        //console.log('irisClass: ' + clsName);
+        let fqn = glsdb.classMethod(clsName, "%ClassName", 1);
+        //console.log('fqn: ' + fqn);
 
         let properties = {};
         let methods = {}
@@ -1124,7 +1191,7 @@ class glsDB {
           for (let i = 1; i < (count + 1); i++) {
             let property = Properties.method('GetAt', i);
             let name = property.getproperty('Name');
-            properties[name] = true;
+            properties[name] = property.getproperty('Type');
           }
 
           let Methods = ClassDefinition.getproperty('Methods');
@@ -1135,81 +1202,58 @@ class glsDB {
             methods[name] = true;
           }
         }
-        return class {
+
+        let irisCls = class {
 
           constructor(id) {
             this._name = clsName;
-            this.packageName = packageName;
-            this.className = className;
-            this.fqn = fqn;
-            this.properties = properties;
-            this.methods = methods;
-            this.classExists = classExists;
+            this._fqn = fqn;
+            this._properties = properties;
+            this._methods = methods;
+            this._classExists = classExists;
 
             if (typeof id === 'object' && id.method) {
-              return this.#proxy(id);
+              this._proxy = glsdb.irisProxy(id, this);
+              return
             }
 
             if (id) {
-              let obj = glsdb.classMethod(this.fqn, "%OpenId", id);
-              return this.#proxy(obj);
+              //console.log(2222222);
+              //console.log('id = ' + id);
+              let obj = glsdb.classMethod(this._fqn, "%OpenId", id);
+              if (obj === '') {
+                this._exists = false;
+                return;
+              }
+              this._exists = true;
+              this._mclass = obj;
+              this._proxy = glsdb.irisProxy(obj, this);
+              return;
             }
             else {
-              let obj = glsdb.classMethod(this.fqn, "%New");
-              return this.#proxy(obj);
+              let obj = glsdb.classMethod(this._fqn, "%New");
+              this._exists = true;
+              this._mclass = obj;
+              this._proxy = glsdb.irisProxy(obj, this);
+              return;
             }
 
-          }
-
-          #proxy(obj) {
-
-            let iris = this;
- 
-            let handler = {
-              get(target, prop, receiver) {
-                //console.log('** get proxy prop = ' + prop);
-                if (prop === 'save') {
-                  return function() {
-                    return obj.method('%Save', ...arguments);
-                  };
-                }
-
-                if (iris.methods[prop]) {
-                  return function() {
-                    return obj.method(prop, ...arguments);
-                  };
-                }
-                if (iris.properties[prop]) {
-                  let property = obj.getproperty(prop);
-                  if (typeof property === 'object' && property.method) {
-                    let fqn = property.method('%PackageName') + '.' + property.method('%ClassName');
-                    let cls = glsdb.irisClass(fqn);
-                    return new cls(property);
-                  }
-                  return property;
-                }
-                if (target[prop]) {
-                  return target[prop];
-                }
-                return '';
-              },
-              set(target, prop, value) {
-                if (iris.properties[prop]) {
-                  obj.setproperty(prop, value);
-                }
-                return true;
-              }
-            };
-            return new Proxy(this, handler);
           }
 
           set(obj) {
+            let mclass = this._mclass;
             for (let name in obj) {
-              this[name] = obj[name];
+              mclass.setproperty(name, obj[name]);
             }
-            return this.save();
+            return mclass.method('%Save');
           }
         };
+
+        return function(id) {
+          let cls = new irisCls(id);
+          return cls._proxy;
+        }
+
       };
     }
   }
