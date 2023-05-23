@@ -1,8 +1,8 @@
 # YottaDB-based Playground for glsdb
 #  (includes fastify, fastify-plugin, qoper8-plugin and qoper8-wt + qoper8-cp
 
-# M/Gateway Developments Ltd
-# 23 September 2022
+# MGateway Ltd
+# 23 May 2023
 
 FROM debian:bullseye
 
@@ -49,7 +49,7 @@ RUN locale-gen en_US.UTF-8
 
 # ===  Install Node.js & NPM
 
-ENV NODE_VERSION 16.17.0
+ENV NODE_VERSION 16.17.1
 
 RUN ARCH= && dpkgArch="$(dpkg --print-architecture)" \
   && case "${dpkgArch##*-}" in \

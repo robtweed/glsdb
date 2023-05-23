@@ -2,8 +2,8 @@
 
 # Dockerised version of QEWD using Redis
 
-# M/Gateway Developments Ltd
-# 10 March 2021
+# MGateway Ltd
+# 23 May 2023
 
 FROM ubuntu:20.04
 

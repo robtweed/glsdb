@@ -1,7 +1,7 @@
 # glsdb: Global Storage Database Abstraction for Node.js
  
 Rob Tweed <rtweed@mgateway.com>  
-12 September 2022, M/Gateway Developments Ltd [http://www.mgateway.com](http://www.mgateway.com)  
+23 May 2023, MGateway Ltd [https://www.mgateway.com](https://www.mgateway.com)  
 
 Twitter: @rtweed
 
@@ -764,11 +764,11 @@ Type:
 
 ## License
 
- Copyright (c) 2022 M/Gateway Developments Ltd,                           
+ Copyright (c) 2023 MGateway Ltd,                           
  Redhill, Surrey UK.                                                      
  All rights reserved.                                                     
                                                                            
-  http://www.mgateway.com                                                  
+  https://www.mgateway.com                                                  
   Email: rtweed@mgateway.com                                               
                                                                            
                                                                            
