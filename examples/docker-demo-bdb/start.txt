@@ -1,5 +1,0 @@
-docker build -t glsdb-bdb .
-
-then, to run...
-
-docker run --name glsdb --rm -it glsdb-bdb

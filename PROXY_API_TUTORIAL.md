@@ -6,33 +6,6 @@ This Tutorial will explain how you can use *glsdb*'s Proxy-based abstraction of 
 It is recommended that you also take the [Tutorial that explains the Basic APIs.](./BASIC_APIS_TUTORIAL.md), since this will help understand what's going on behind the scenes when using the Proxy API.
 
 
-## Install *glsdb*
-
-        npm install glsdb
-
-
-## Import and Open a Database Connection
-
-
-In this tutorial I'll assume you're using YottaDB and that you've enabled the *mgsi* Superserver on port 7041:
-
-        const {glsDB} = await import('glsdb');
-        const glsdb = new glsDB('yottadb');
-        glsdb.open({
-          host: '172.17.0.2',
-          tcp_port: 7041
-        };
-
-However, you can use and open any of the supported Global Storage databases or emulations: the *glsdb* tutorial examples below will behave identically on all of them.
-
-We're now ready to begin!
-
-
-Remember to finish any scripts with:
-
-        glsdb.close();
-
-
 ## Our Database Design
 
 Let's suppose we want to create and maintain a Global Storage database of details about people - perhaps a membership database.

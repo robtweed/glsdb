@@ -23,27 +23,41 @@
  |  limitations under the License.                                           |
  ----------------------------------------------------------------------------
 
-28 September 2022
+24 October 2023
 
  */
 
-import { createRequire } from 'module'; 
-import path from 'path';
+import {server, mglobal, mclass} from 'mg-dbx-napi';
 import util from 'node:util';
+
+let instance;
+let cached_mglobal = new Map();
+let db;
+let use;
+let dbType;
 
 class glsDB {
 
   #getVersion;
   #node;
 
-  constructor(db, options) {
+  constructor(options) {
 
-    const modulesPath = path.resolve(process.cwd(), 'node_modules');
-    const localRequire = createRequire(modulesPath);
+    if (instance) {
+      throw new Error("You can only create one instance!");
+    }
+    instance = this;
 
     options = options || {};
     let maxArrayDigits = options.maxArrayDigits || 6;
     let arrayPadChar = options.arrayPadChar || '0';
+
+    if (options.db) {
+      // being instantiated via mg_web_router which has already opened an mg-dbx-napi connection
+      db = options.db;
+      use = options.use;
+      dbType = options.type;
+    }
 
     function isArrayKey(key) {
       return (key[0] === '[' && key.slice(-1) === ']');
@@ -92,145 +106,65 @@ class glsDB {
       return parseInt(value);
     }
 
-    if (!db || db === '') return {ok: false};
-    db = db.toLowerCase();
-
-    let db_module = new Map();
-    db_module.set('bdb', {
-      type: 'BDB',
-      module: 'mg-dbx-bdb',
-      dbx: 'dbxbdb'
-    });
-
-    db_module.set('lmdb', {
-      type: 'LMDB',
-      module: 'mg-dbx-bdb',
-      dbx: 'dbxbdb'
-    });
-
-    db_module.set('redis', {
-      type: 'Redis',
-      module: './mg-dbx-redis.js',
-      dbx: 'dbx'
-    });
-
-    db_module.set('yottadb', {
-      type: 'YottaDB',
-      module: 'mg-dbx',
-      dbx: 'dbx'
-    });
-
-    db_module.set('ydb', {
-      type: 'YottaDB',
-      module: 'mg-dbx',
-      dbx: 'dbx'
-    });
-
-    db_module.set('iris', {
-      type: 'IRIS',
-      module: 'mg-dbx',
-      dbx: 'dbx'
-    });
-
-    db_module.set('cache', {
-      type: 'Cache',
-      module: 'mg-dbx',
-      dbx: 'dbx'
-    });
-
-
-    if (!db_module.has(db)) return {ok: false};
-    let dbm = db_module.get(db);
-
-    // if possible load the pre-built mg-dbx binaries...
-
-    let arch = process.arch;
-    if (arch === 'x64' && process.platform === 'win32') arch = 'win';
-    let version = process.version.split('.')[0];
-    if (dbm.module === 'mg-dbx' && ['win', 'arm', 'arm64', 'x64'].includes(arch)) {
-      if (['v14', 'v16', 'v18'].includes(version)) {
-        dbm.module = 'glsdb/mgdbx-' + arch + '-' + version;
-      }
-    }
-
-    if (dbm.module === 'mg-dbx-bdb' && ['win', 'arm', 'arm64', 'x64'].includes(arch)) {
-      if (['v14', 'v16', 'v18'].includes(version)) {
-        dbm.module = 'glsdb/mgdbx-bdb-' + arch + '-' + version;
-      }
-    }
-
-    const db_mod = localRequire(dbm.module);
-    const dbx = db_mod[dbm.dbx];
-    const mglobal = db_mod.mglobal;
-    let DB = new dbx();
-
-    //this.db = DB;
-
     let glsdb = this;
   
     this.open = function(params) {
-      let options = {
-        type: dbm.type
-      };
 
-      if (dbm.type === 'YottaDB' && params.connection === 'api') {
-        let str = '';
-        for (const name in params.env) {
-          str = str + name + '=' + params.env[name] + '\n';
-        }
-        str = str + '\n';
-        options.env_vars = str;
-        options.path = params.path
-      }
-      else {
-        for (const name in params) {
-          if (name !== 'connection') {
-            options[name] = params[name];
-          }
-        }
-      }
+      // for use when running glsdb standalone
 
-      DB.open(options);
+      if (!params) return;
+      db = new server();
+      db.open(params);
+      dbType = params.type;
+
+      use = function() {
+        let args = [...arguments];
+        let key = args.toString();
+        if (!cached_mglobal.has(key)) {
+          cached_mglobal.set(key, {
+            container: new mglobal(db, ...args),
+            at: Date.now()
+          });
+        }
+        return cached_mglobal.get(key).container;
+      }
     };
 
     this.close = function() {
-      DB.close();
-      //console.log('DB.close() completed');
+      if (db) db.close();
     }
 
     function __setDocument(node, obj, parsed) {
 
-          if (!parsed) {
-            obj = JSON.parse(JSON.stringify(obj));
-            parsed = true;
-          }
-          let isArray = Array.isArray(obj);
-          if (isArray && obj.length === 0) {
-            node.$('[]').value = '';
-            return;
-          }
-          for (let key in obj){
-            let childNode;
-            if (isArray) {
-              childNode = node._(key);
-            }
-            else {
-              //childNode = this.$(key);
-              childNode = getChildNode(node, key);
-            }
-            let childObj = obj[key];
-            if (childObj === null || typeof childObj === 'undefined') childObj = '';
-            if (typeof childObj === 'object') {
-              __setDocument(childNode, childObj, parsed);
-            }
-            else if (typeof childObj === 'function') {
-              return;
-            }
-            else {
-              let globalNode = new mglobal(DB, ...childNode.keys);
-              globalNode.set(obj[key].toString());
-            }
-          }
+      if (!parsed) {
+        obj = JSON.parse(JSON.stringify(obj));
+        parsed = true;
+      }
+      let isArray = Array.isArray(obj);
+      if (isArray && obj.length === 0) {
+        node.$('[]').value = '';
+        return;
+      }
+      for (let key in obj){
+        let childNode;
+        if (isArray) {
+          childNode = node._(key);
+        }
+        else {
+          childNode = getChildNode(node, key);
+        }
+        let childObj = obj[key];
+        if (childObj === null || typeof childObj === 'undefined') childObj = '';
+        if (typeof childObj === 'object') {
+          __setDocument(childNode, childObj, parsed);
+        }
+        else if (typeof childObj === 'function') {
+          return;
+        }
+        else {
+          new glsdb.node(childNode.keys).value = obj[key].toString();
+        }
+      }
     }
 
     function getChildNode(node, key) {
@@ -293,7 +227,6 @@ class glsDB {
           });
         }
       });
-      //if (Array.isArray(obj) && obj.length === 1 && obj[0] === '') return [];
       return obj;
     };
 
@@ -365,20 +298,18 @@ class glsDB {
           //console.log(this.keys);
         }
 
-        if (dbm.type === 'Redis') {
-          this.#globalNode = new DB.mglobal(this.keys);
-        }
-        else {
-          //this.#globalNode = DB.mglobal(...this.keys);
-          this.#globalNode = new mglobal(DB, ...this.keys);
-        }
+        this.name = this.keys[0];
+
+        // create subscripts array by removing the name from keys
+        this.subscripts = this.keys.slice();
+        this.subscripts.shift();
+        this.#globalNode = use(this.name);
+
         this.path = toPath(keys);
-        this.name = keys[0];
         this.key = '';
         if (keys.length > 1) {
           this.key = this.keys[this.keys.length - 1];
         }
-
       }
 
       get proxy() {
@@ -542,7 +473,9 @@ class glsDB {
             this.document = val;
           }
           else {
-            this.#globalNode.set(val);
+            let args = this.subscripts.slice();
+            args.push(val);
+            this.#globalNode.set(...args);
           }
         }
       }
@@ -550,31 +483,31 @@ class glsDB {
         if (!this.exists) return '';
         if (!this.isLeafNode) return this.document;
 
-        let value = this.#globalNode.get();
+        let value = this.#globalNode.get(...this.subscripts);
         if (value === 'true') value = true;
         if (value === 'false') value = false;
         return value;
       }
 
       delete() {
-        this.#globalNode.delete();
+        this.#globalNode.delete(...this.subscripts);
       }
 
       get exists() {
-        return (this.#globalNode.defined() !== '0');
+        return (this.#globalNode.defined(...this.subscripts) !== '0');
       }
 
       get hasChildren() {
-        let def = this.#globalNode.defined();
+        let def = this.#globalNode.defined(...this.subscripts);
         return (def === '10' || def === '11');
       }
 
       get isLeafNode() {
-        return (this.#globalNode.defined() === '1');
+        return (this.#globalNode.defined(...this.subscripts) === '1');
       }
 
       get hasValue() {
-        return (this.#globalNode.defined() === '1');
+        return (this.#globalNode.defined(...this.subscripts) === '1');
       }
 
       get isArray() {
@@ -589,12 +522,16 @@ class glsDB {
 
       increment(amount) {
         amount = amount || 1;
-        return this.#globalNode.increment(amount);
+        let args = this.subscripts.slice();
+        args.push(amount);
+        return this.#globalNode.increment(...args);
       }
 
       get firstChild() {
         let key = '';
-        key = this.#globalNode.next(key);
+        let args = this.subscripts.slice();
+        args.push(key);
+        key = this.#globalNode.next(...args);
         if (key !== '') {
           let keys = [...this._keys];
           keys.push(key);
@@ -604,7 +541,9 @@ class glsDB {
 
       get lastChild() {
         let key = '';
-        key = this.#globalNode.previous(key);
+        let args = this.subscripts.slice();
+        args.push(key);
+        key = this.#globalNode.previous(...args);
         if (key !== '') {
           let _keys = [...this._keys];
           _keys.push(key);
@@ -627,7 +566,9 @@ class glsDB {
         let key = this.key;
         if (key === '') return;
         let parent = this.parent;
-        key = parent.#globalNode.next(key);
+        let args = this.subscripts.slice();
+        args.push(key);
+        key = parent.#globalNode.next(...args);
         if (key !== '') {
           let _keys = [...parent._keys];
           _keys.push(key);
@@ -639,7 +580,9 @@ class glsDB {
         let key = this.key;
         if (key === '') return;
         let parent = this.parent;
-        key = parent.#globalNode.previous(key);
+        let args = this.subscripts.slice();
+        args.push(key);
+        key = parent.#globalNode.previous(...args);
         if (key !== '') {
           let _keys = [...parent._keys];
           _keys.push(key);
@@ -899,18 +842,24 @@ class glsDB {
       }
 
       lock(timeout) {
+        //console.log('lock set for ' + this.name + ': ' + this.subscripts);
         timeout = timeout || -1;
-        let status = this.#globalNode.lock(timeout);
+        let args = this.subscripts.slice();
+        args.push(timeout);
+        let status = this.#globalNode.lock(...args);
         return (status === '1');
       }
 
       unlock() {
-        let status = this.#globalNode.unlock();
+        //console.log('lock unset for ' + this.name + ': ' + this.subscripts);
+        let status = this.#globalNode.unlock(...this.subscripts);
         return (status === '1');
       }
 
       import(node) {
-        return this.#globalNode.merge(node.#globalNode);
+        let args = this.subscripts.slice();
+        args.push(node.#globalNode);
+        return this.#globalNode.merge(...args);
       }
 
       forEachLeafNode(options, callback) {
@@ -918,7 +867,7 @@ class glsDB {
           callback = options;
           options = {};
         }
-        let mcursor = db_mod.mcursor;
+        //let mcursor = db_mod.mcursor;
         let direction = options.direction || 'forwards';
         if (direction !== 'forwards' && direction !== 'backwards' && direction !== 'reverse') {
           direction = 'forwards';
@@ -1033,7 +982,7 @@ class glsDB {
       return DB.version();
     }
 
-    if (dbm.type === 'IRIS' || dbm.type === 'Cache' || dbm.type === 'YottaDB') {
+    if (dbType === 'IRIS' || dbType === 'Cache' || dbType === 'YottaDB') {
 
       this.function = function(fn) {
         return function() {
@@ -1047,7 +996,7 @@ class glsDB {
         callback = options;
         options = {};
       }
-      let mcursor = db_mod.mcursor;
+      //let mcursor = db_mod.mcursor;
       let stop = false;
       let result;
       let from = options.from || '';
@@ -1061,7 +1010,7 @@ class glsDB {
       }
     };
 
-    if (dbm.type === 'IRIS' || dbm.type === 'Cache' || dbm.type === 'YottaDB') {
+    if (dbType === 'IRIS' || dbType === 'Cache' || dbType === 'YottaDB') {
 
       this.transaction = {
 
@@ -1083,8 +1032,8 @@ class glsDB {
       };
     }
 
-    if (dbm.type === 'IRIS' || dbm.type === 'Cache') {
-      let mclass = db_mod.mclass;
+    if (dbType === 'IRIS' || dbType === 'Cache') {
+      //let mclass = db_mod.mclass;
       this.classMethod = function(cls, method) {
         let args = [...arguments];
         args.splice(0, 2);

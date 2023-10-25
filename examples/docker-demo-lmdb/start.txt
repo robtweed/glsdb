@@ -1,5 +1,0 @@
-docker build -t glsdb-lmdb .
-
-then, to run...
-
-docker run --name glsdb --rm -it glsdb-lmdb

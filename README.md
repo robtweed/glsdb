@@ -13,46 +13,35 @@ Google Group for discussions, support, advice etc: [http://groups.google.co.uk/g
 *glsdb* is a Node.js/JavaScript abstraction of [Global Storage Databases](https://github.com/robtweed/global_storage).
 With *glsdb*, a Global Storage Database is abstracted as JavaScript Objects that represent database nodes and provide properties and methods for accessing and navigating between database nodes.
 
-*glsdb* relies on the [*mg-dbx*](https://github.com/chrisemunt/mg-dbx) interfaces which provide access to the following Global Storage databases:
+*glsdb* relies on the [*mg-dbx-napi*](https://github.com/chrisemunt/mg-dbx) interfaces which provide access to the following Global Storage databases:
 
 - the Open Source [YottaDB](https://yottadb.com) database
 - the InterSystems [IRIS Data Platform](https://www.intersystems.com/data-platform/)
 
 When using IRIS, *glsdb* further abstracts IRIS's Persistent Objects via a JavaScript proxy object, giving the appearance that you have direct, seamless access to IRIS objects (ie within the IRIS database) from corresponding JavaScript Objects.
 
-
-*glsdb* can also be used with the [*mg-dbx-bdb*](https://github.com/chrisemunt/mg-dbx) interface,
- which creates a Global Storage Database emulation for:
-
-- [Berkeley DB](https://www.oracle.com/uk/database/technologies/related/berkeleydb.html)
-- [LMDB](http://www.lmdb.tech/doc/)
-
-
 ## Installing *glsdb*
 
         npm install glsdb
 
-*glsdb* is compatible with Node.js version 14 and later.
-
-For convenience, *glsdb* includes pre-built binaries for *mg-dbx* and *mg-dbx-bdb* for the following platforms:
-
-- 64-bit Intel Linux and Node.js versions 14, 16 and 18
-- 32-bit ARM Linux and Node.js versions 14, 16 and 18
-- 64-bit ARM Linux and Node.js versions 14, 16 and 18
-- 64-bit Windows and Node.js versions 14, 16 and 18
-
-For any other Operating System/Platform or Node.js version, you must manually install *mg-dbx* or *mg-dbx*.  See the 
+*glsdb* is compatible with Node.js version 18 and later.
 
 
 ## Using *glsdb* with Node.js
 
-As you will discover in this documentation, the *glsdb* abstraction of Global Storage databases relies on synchronous access to the actual physical Global Storage database.  Whilst Global Storage databases, particularly the native implementations, are extremely fast, the synchronous nature of the *glsdb* APIs will block the Node.js main thread of execution, which is clearly undesirable if the Node.js process is being used concurrently by multiple users.
+As you will discover in this documentation, the *glsdb* abstraction of Global Storage databases relies on synchronous access to the actual physical Global Storage database.  Whilst the native implementations
+of Global Storage databases are extremely fast, the synchronous nature of the *glsdb* APIs will block the Node.js main thread of execution, albeit momentarily.
 
-It is therefore recommended that *glsdb* is used in conjunction with a module such as 
-[QOper8-wt*](https://github.com/robtweed/qoper8-wt) or 
-[QOper8-cp](https://github.com/robtweed/qoper8-cp), where individual messages are handled in isolation within a Worker Thread or Child Process, resulting in no concurrency issues.
+This, however, is not a problem if you use *glsdb* with our recommended 
+[*mg_web*](https://github.com/chrisemunt/mg_web) extension for the major industry-standard web servers
+ (nginx, Apache and Microsoft IIS): within the Node.js child
+processes that it automatically forks, only one request is handled at a time, so there is no concurrency
+to worry about.
 
-[This tutorial](./FASTIFY.md) explains how you can use *glsdb* and the *QOper8* modules in conjunction with the Fastify Web Server for Node.js, allowing you to use a Global Storage database as part of a high-performance, high-scalability REST-based back-end service.
+if you prefer to use the Fastify Web Framework, you can use the 
+[*qoper8-fastify*](https://github.com/robtweed/qoper8-fastify) Plugin which integrates
+the [QOper8-cp](https://github.com/robtweed/qoper8-cp) module to create a similar run-time
+Node.js environment within CHild Processes where only a single request is handled at a time.
 
 
 ## Starting and Configuring *glsdb*
@@ -68,17 +57,7 @@ It is therefore recommended that *glsdb* is used in conjunction with a module su
 - Next, create an instance of the *glsDB* class, specifying the database type you want to use:
 
 
-        const glsdb = new glsDB(database_type);
-
-  where *database_type* can be:
-
-- *iris*: the InterSystems IRIS Data Platform
-- *yottadb* or *ydb*: YottaDB
-- *cache* the Cache database from InterSystems (now a legacy product)
-- *bdb*: Berkeley DB
-- *lmdb*: the LMDB database
-
-*glsdb* will automatically import the appropriate interface module for your selected database type.
+        const glsdb = new glsDB();
 
 
 - Finally you must open a connection to your database of choice:
@@ -98,9 +77,6 @@ If you choose a network connection, then the database and Node.js process can re
 If you choose an API connection, both Node.js and the database must reside on the same physical hardware.  This closely-coupled API connection will result in significantly higher performance, but that must be balanced against any potential security concerns.
 
 Note that the type of connection you choose will make no difference to the syntax of the *glsdb* APIs.
-
-
-If you use Berkeley DB or LMDB, then, because these are embedded databases, the only available option is an API/in-process connection.
 
 
 ### Database Opening Options
@@ -221,59 +197,13 @@ on your YottaDB database system.
         });
 
 
-#### Berkeley DB:
-
-  You must specify:
-
-  - *db_library*: the path to the Berkeley DB shared object or dll
-
-  - *db_file*: the path to the database file you want to use (it is created if it does not already exist)
-
-  - *env_dir*: the path to your Berkeley DB installation
-
-  - *key_type*: must be set to *m* for *glsdb*.
-
-  For example:
-
-        glsdb.open({
-          db_library: "/usr/local/BerkeleyDB.18.1/lib/libdb.so",
-          db_file: "/opt/bdb/my_bdb_database.db",
-          env_dir: "/opt/bdb",
-          key_type: "m"
-        });
-
-
-#### LMDB:
-
-  You must specify:
-
-  - *db_library*: the path to the LMDB shared object or dll
-
-  - *env_dir*: the path to your LMDB installation
-
-  - *key_type*: must be set to *m* for *glsdb*.
-
-  For example:
-
-        glsdb.open({
-          db_library: "liblmdb.so",
-          env_dir: "/opt/lmdb",
-          key_type: "m"
-        });
-
-
-
 ## Closing the Database Connection
 
-On completion of your processing logic, it is recommended that you cleanly close the connection to the database using the *close()* API, eg:
+When terminating a Child Process, it is recommended that you first cleanly close the connection to the database using the *close()* API, eg:
 
         glsdb.close();
 
-If you are using the *QOper8-wt* or *QOper8-cp* modules, the *close()* API should be invoked before a Worker Thread or Child Process is terminated, eg:
-
-        qoper8.on('stop', function() {
-          glsdb.close();
-        });
+This will be automatically done for you if you use the *mg_web* or *qoper8-fastify* modules.
 
 
 ## The *glsdb* APIs
@@ -576,190 +506,6 @@ You can inspect the properties and methods of the object:
 
 ----
 
-## Demonstration Docker Containers
-
-This *glsdb* repository includes a set of Dockerfiles for creating a quick and easy Containers in which you can try everything out using three different supported databases:
-
-- YottaDB
-- Berkeley DB
-- LMDB
-
-They each include the exact same demonstration script, with the only exception being the database connection options.
-
-
-### YottaDB Container
-
-It includes a copy of Node.js and a pre-installed, pre-configured copy of the YottaDB database.
-
-### Building the Container
-
-You'll need to have Docker installed on your computer before carrying out the steps below.
-
-Clone the repository in a folder on your computer:
-
-        git clone https://github.com/robtweed/glsdb
-
-Then navigate to the folder containing the Dockerfile and supporting files:
-
-        cd glsdb/examples/docker-demo-ydb
-
-You'll see a handy reminder file named *start.txt* that contains the commands for building and running the container.
-
-
-To build the container:
-
-        docker build -t glsdb .
-
-
-### Start the COntainer
-
-Once the build has completed, you can start it at any time thereafter using:
-
-        docker run --name glsdb --rm -it glsdb
-
-
-### Running the *glsdb* Demo
-
-
-You'll find yourself in the */opt/glsdb* folder of the Container which will contain a Node.js script file named *demo.mjs*.
-
-This demo script exercises a number of *glsdb* APIs, in particular the Proxied ones.  Take a look at its contents.
-
-
-Then run it:
-
-      node demo.mjs
-
-
-### Take a Look at the Global Storage Database
-
-After the demo has run, you can take a look at the database that it's created in the Container's YottaDB database.
-
-First, open the YottaDB shell:
-
-      ./ydb
-
-      YDB> 
-
-Then type:
-
-      YDB> zwr ^Person
-
-You should see a listing of the database contents for the *Person* Global.
-
-Each time you run the script it will add another identical person record using the next generated Id value.
-
-
-To close the YottaDB Shell:
-
-      YDB> h
-
-
-### Exit and Shut Down the COntainer
-
-Type:
-
-      exit
-
-
-### Berkeley DB Container
-
-It includes a copy of Node.js and a pre-installed copy of the Berkeley DB database.
-
-### Building the Container
-
-You'll need to have Docker installed on your computer before carrying out the steps below.
-
-Clone the repository in a folder on your computer:
-
-        git clone https://github.com/robtweed/glsdb
-
-Then navigate to the folder containing the Dockerfile and supporting files:
-
-        cd glsdb/examples/docker-demo-bdb
-
-You'll see a handy reminder file named *start.txt* that contains the commands for building and running the container.
-
-
-To build the container:
-
-        docker build -t glsdb-bdb .
-
-
-### Start the COntainer
-
-Once the build has completed, you can start it at any time thereafter using:
-
-        docker run --name glsdb --rm -it glsdb-bdb
-
-
-### Running the *glsdb* Demo
-
-
-You'll find yourself in the */opt/glsdb* folder of the Container which will contain a Node.js script file named *demo.mjs*.
-
-This demo script exercises a number of *glsdb* APIs, in particular the Proxied ones.  Take a look at its contents.
-
-
-Then run it:
-
-      node demo.mjs
-
-### Exit and Shut Down the COntainer
-
-Type:
-
-      exit
-
-
-### LMDB Container
-
-It includes a copy of Node.js and a pre-installed copy of the LMDB database.
-
-### Building the Container
-
-You'll need to have Docker installed on your computer before carrying out the steps below.
-
-Clone the repository in a folder on your computer:
-
-        git clone https://github.com/robtweed/glsdb
-
-Then navigate to the folder containing the Dockerfile and supporting files:
-
-        cd glsdb/examples/docker-demo-lmdb
-
-You'll see a handy reminder file named *start.txt* that contains the commands for building and running the container.
-
-
-To build the container:
-
-        docker build -t glsdb-lmdb .
-
-
-### Start the COntainer
-
-Once the build has completed, you can start it at any time thereafter using:
-
-        docker run --name glsdb --rm -it glsdb-lmdb
-
-
-### Running the *glsdb* Demo
-
-
-You'll find yourself in the */opt/glsdb* folder of the Container which will contain a Node.js script file named *demo.mjs*.
-
-This demo script exercises a number of *glsdb* APIs, in particular the Proxied ones.  Take a look at its contents.
-
-
-Then run it:
-
-      node demo.mjs
-
-### Exit and Shut Down the COntainer
-
-Type:
-
-      exit
 
 
 ## License
