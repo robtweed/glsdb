@@ -5,7 +5,7 @@
   "type": "module",
   "main": "/src/glsdb.mjs",
   "exports": {
-    ".": "./src/glsdb.mjs",
+    ".": "./src/glsdb.mjs"
   },
   "engines" : {
     "node" : ">=18.0.0"
