@@ -23,11 +23,11 @@
  |  limitations under the License.                                           |
  ----------------------------------------------------------------------------
 
-24 October 2023
+13 November 2023
 
  */
 
-import {server, mglobal, mclass} from 'mg-dbx-napi';
+import {server, mglobal, mclass, mcursor} from 'mg-dbx-napi';
 import util from 'node:util';
 
 let instance;
@@ -883,7 +883,7 @@ class glsDB {
         for (let i = 1; i < this.keys.length; i++) {
           global.key.push(this.keys[i].toString());
         }
-        let query = new mcursor(DB, global, opts);
+        let query = new mcursor(db, global, opts);
         let result;
         let results = [];
         let stop = false;
@@ -979,14 +979,14 @@ class glsDB {
     };
 
     this.#getVersion = function() {
-      return DB.version();
+      return db.version();
     }
 
     if (dbType === 'IRIS' || dbType === 'Cache' || dbType === 'YottaDB') {
 
       this.function = function(fn) {
         return function() {
-          return DB.function(fn, ...arguments);
+          return db.function(fn, ...arguments);
         };
       }
     }
@@ -1000,7 +1000,7 @@ class glsDB {
       let stop = false;
       let result;
       let from = options.from || '';
-      let query = new mcursor(DB, {global: from}, {globaldirectory: true});
+      let query = new mcursor(db, {global: from}, {globaldirectory: true});
       while (!stop && (result = query.next()) !== null) { 
         let name = result.split('^')[1];
         if (callback && typeof callback === 'function') {
@@ -1015,19 +1015,19 @@ class glsDB {
       this.transaction = {
 
         start: function() {
-          return DB.tstart();
+          return db.tstart();
         },
 
         level() {
-          return DB.tlevel();
+          return db.tlevel();
         },
 
         commit: function() {
-          return DB.tcommit();
+          return db.tcommit();
         },
 
         rollback: function() {
-          return DB.trollback();
+          return db.trollback();
         }
       };
     }
@@ -1037,7 +1037,7 @@ class glsDB {
       this.classMethod = function(cls, method) {
         let args = [...arguments];
         args.splice(0, 2);
-        const icls = new mclass(DB, cls);
+        const icls = new mclass(db, cls);
         return icls.classmethod(method, ...args);
       }
 
