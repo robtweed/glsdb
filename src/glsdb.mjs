@@ -57,7 +57,6 @@ class glsDB {
       db = options.db;
       use = options.use;
       dbType = options.type;
-      mcursor = options.mcursor;
     }
 
     function isArrayKey(key) {
