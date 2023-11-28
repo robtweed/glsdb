@@ -23,7 +23,7 @@
  |  limitations under the License.                                           |
  ----------------------------------------------------------------------------
 
-13 November 2023
+28 November 2023
 
  */
 
@@ -57,6 +57,7 @@ class glsDB {
       db = options.db;
       use = options.use;
       dbType = options.type;
+      mcursor = options.mcursor;
     }
 
     function isArrayKey(key) {
@@ -793,7 +794,9 @@ class glsDB {
           if (endNode) endKey = endNode.key;
         }
         let stop = false;
-        while (!stop && (key = this.#globalNode[fn](key)) != "") {
+        let subscripts = this.subscripts.slice();
+        subscripts.push(key);
+        while (!stop && (key = this.#globalNode[fn](...subscripts)) != "") {
           if (options.startsWith && !key.startsWith(options.startsWith)) {
             stop = true;
             break;
@@ -807,6 +810,8 @@ class glsDB {
             let ok = callback(childNode);
             if (ok === false) stop = true;
           }
+          subscripts.pop();
+          subscripts.push(key);
         }
       }
 

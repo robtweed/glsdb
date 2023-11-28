@@ -1,6 +1,6 @@
 {
   "name": "glsdb",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Global Storage Database Abstraction",
   "type": "module",
   "main": "/src/glsdb.mjs",
