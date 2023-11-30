@@ -23,7 +23,7 @@
  |  limitations under the License.                                           |
  ----------------------------------------------------------------------------
 
-28 November 2023
+29 November 2023
 
  */
 
@@ -254,6 +254,12 @@ class glsDB {
           }
           else {
             keyArr = p.match(/\[([0-9]+)\]|[^\]\[.]+/g);
+            for (const [index, key] of keyArr.entries()) {
+              if (key.includes('#056')) {
+                let pcs = key.split('#056');
+                keyArr[index] = pcs.join('.');
+              }
+            }
           }
           for (let i = 0; i < keyArr.length; i++) {
             keyArr[i] = setArrayValue(keyArr[i]);
@@ -262,7 +268,14 @@ class glsDB {
         }
 
         function toKeys(p) {
-          return p.match(/\[([0-9]+)\]|[^\]\[.]+/g);
+          let keys = p.match(/\[([0-9]+)\]|[^\]\[.]+/g);
+          for (const [index, key] of keys.entries()) {
+            if (key.includes('#056')) {
+              let pcs = key.split('#056');
+              keys[index] = pcs.join('.');
+            }
+          }
+          return keys;
         }
 
         function toPath(keyArr) {
@@ -276,6 +289,10 @@ class glsDB {
               path = path + key;
             }
             else {
+              if (key.includes('.')) {
+                let pcs = key.split('.');
+                key = pcs.join('#056');
+              }
               path = path + delim + key;
               delim = '.';
             }
@@ -567,7 +584,6 @@ class glsDB {
         if (key === '') return;
         let parent = this.parent;
         let args = this.subscripts.slice();
-        args.push(key);
         key = parent.#globalNode.next(...args);
         if (key !== '') {
           let _keys = [...parent._keys];
@@ -581,7 +597,6 @@ class glsDB {
         if (key === '') return;
         let parent = this.parent;
         let args = this.subscripts.slice();
-        args.push(key);
         key = parent.#globalNode.previous(...args);
         if (key !== '') {
           let _keys = [...parent._keys];
@@ -594,14 +609,6 @@ class glsDB {
         let _keys = [...this._keys];
         _keys.push(key);
         let newNode = new glsdb.node(_keys);
-        //if (isArrayKey(key)) {
-          //  let value = getArrayValue(key);
-          //  this['_' + value] = newNode;
-          //this['$[' + value + ']'] = newNode;
-        //}
-        //else {
-          //this['$' + key] = newNode;
-        //}
         return newNode;
       }
 
@@ -784,12 +791,24 @@ class glsDB {
         }
         if (options.from) {
           let childNode = getChildNode(this, options.from);
-          let seedNode = childNode.previousSibling;
+          let seedNode;
+          if (fn === 'next') {
+            seedNode = childNode.previousSibling;
+          }
+          else {
+            seedNode = childNode.nextSibling;
+          }
           if (seedNode) key = seedNode.key;
         }
         if (options.to) {
           let childNode = getChildNode(this, options.to);
-          let endNode = childNode.nextSibling;
+          let endNode;
+          if (fn === 'next') {
+            endNode = childNode.nextSibling;
+          }
+          else {
+            endNode = childNode.previousSibling;
+          }
           if (endNode) endKey = endNode.key;
         }
         let stop = false;
