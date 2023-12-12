@@ -23,7 +23,7 @@
  |  limitations under the License.                                           |
  ----------------------------------------------------------------------------
 
-29 November 2023
+3 December 2023
 
  */
 
@@ -51,6 +51,7 @@ class glsDB {
     options = options || {};
     let maxArrayDigits = options.maxArrayDigits || 6;
     let arrayPadChar = options.arrayPadChar || '0';
+    let listeners = new Map();
 
     if (options.db) {
       // being instantiated via mg_web_router which has already opened an mg-dbx-napi connection
@@ -134,15 +135,45 @@ class glsDB {
       if (db) db.close();
     }
 
+    // this.dbx allows direct use of mg-dbx-napi APIs
+
+    this.dbx = {
+      db: db,
+      mglobal: mglobal,
+      mcursor: mcursor,
+      mclass: mclass
+    }
+
+    this.on = function(type, callback) {
+      if (!listeners.has(type)) {
+        listeners.set(type, callback);
+      }
+    };
+
+    this.off = function(type) {
+      if (listeners.has(type)) {
+        listeners.delete(type);
+      }
+    };
+
+    this.emit = function(type, data) {
+      if (listeners.has(type)) {
+        let handler =  listeners.get(type);
+        handler.call(instance, data);
+      }
+    }
+
     function __setDocument(node, obj, parsed) {
 
       if (!parsed) {
         obj = JSON.parse(JSON.stringify(obj));
         parsed = true;
       }
-      let isArray = Array.isArray(obj);
+      //let isArray = Array.isArray(obj);
+      //let isArray = obj instanceof Array;
+      let isArray = obj.constructor === Array;
       if (isArray && obj.length === 0) {
-        node.$('[]').value = '';
+        node.$('[]').rawSet('');
         return;
       }
       for (let key in obj){
@@ -151,18 +182,19 @@ class glsDB {
           childNode = node._(key);
         }
         else {
+          //childNode = node.getChild(key);
           childNode = getChildNode(node, key);
         }
         let childObj = obj[key];
         if (childObj === null || typeof childObj === 'undefined') childObj = '';
         if (typeof childObj === 'object') {
-          __setDocument(childNode, childObj, parsed);
+          __setDocument(childNode, childObj, true);
         }
         else if (typeof childObj === 'function') {
           return;
         }
         else {
-          new glsdb.node(childNode.keys).value = obj[key].toString();
+          childNode.rawSet(obj[key].toString());
         }
       }
     }
@@ -188,31 +220,51 @@ class glsDB {
       return lastElement;
     }
 
-    this.document = function(node) {
-
+    this.document = function(node, version) {
       if (util.types.isProxy(node)) {
         node = node._node;
       }
-
-      if (!node.hasChildren) return node.value;
+      if (!node.hasChildren) return node.getValue();
       let obj = {};
-      let baseKeyLength = node.keys.length;
       if (isArrayKey(node.firstChild.key)) obj = [];
-      node.forEachLeafNode(function(leafNode) {
-        // ignore any data nodes if they also have children)
-        if (!leafNode.hasChildren) {
-          let keys = [...leafNode._keys];
+      version = version || 'next';
+
+      if (version === 'next') {
+
+        function getChildren(node, obj) {
+          node.forEachChildNode(function(child) {
+            let key = child.key;
+            if (isArrayKey(key)) {
+                key = getArrayValue(key);
+              }
+            if (child.isLeafNode) {
+              obj[key] = child.getValue();
+            }
+            else {
+              obj[key] = {};
+              if (isArrayKey(child.firstChild.key)) obj[key] = [];
+              getChildren(child, obj[key]);
+            }
+          });
+        }
+
+        getChildren(node, obj);
+        return obj;
+      }
+      else {
+        let baseKeyLength = node.keys.length;
+        node.forEachLeafNode({getdata: true}, function(keys, value) {
           keys.splice(0, baseKeyLength);
           let o = obj;
           keys.forEach(function(key, index) {
-            if (key === '[]' && leafNode.value === '') {
+            if (key === '[]' && value === '') {
               return;
             }
             if (isArrayKey(key)) {
               key = getArrayValue(key);
             }
             if (index === (keys.length - 1)) {
-              o[key] = leafNode.value;
+              o[key] = value
             }
             else {
               let nextKey = keys[index + 1];
@@ -225,9 +277,9 @@ class glsDB {
               o = o[key];
             }
           });
-        }
-      });
-      return obj;
+        });
+        return obj;
+      }
     };
 
     this.node = class {
@@ -249,7 +301,8 @@ class glsDB {
 
         function toPaddedKeys(p) {
           let keyArr;
-          if (Array.isArray(p)) {
+          //if (Array.isArray(p)) {
+          if (p.constructor === Array) {
             keyArr = [...p];
           }
           else {
@@ -289,6 +342,7 @@ class glsDB {
               path = path + key;
             }
             else {
+              key = key.toString();
               if (key.includes('.')) {
                 let pcs = key.split('.');
                 key = pcs.join('#056');
@@ -301,7 +355,8 @@ class glsDB {
         }
 
         let keys = path;
-        if (!Array.isArray(path)) {
+        //if (!Array.isArray(path)) {
+        if (path.constructor !== Array) {
           //console.log('**** path is a string ***');
           keys = toKeys(path);
           this._keys = keys;
@@ -320,8 +375,8 @@ class glsDB {
         // create subscripts array by removing the name from keys
         this.subscripts = this.keys.slice();
         this.subscripts.shift();
+        
         this.#globalNode = use(this.name);
-
         this.path = toPath(keys);
         this.key = '';
         if (keys.length > 1) {
@@ -358,7 +413,7 @@ class glsDB {
             let obj = {
               enumerable: true,
               configurable: true,
-              value: node.$(prop).value
+              value: node.$(prop).getValue()
             };
             if (!node.isArray && !node.$(prop).exists) {
               return Reflect.getOwnPropertyDescriptor({});
@@ -382,7 +437,7 @@ class glsDB {
               //console.log('is a symbol!');
               let symbolType = prop.toString();
               if (symbolType === 'Symbol(Symbol.toPrimitive)') {
-                let value = node.value;
+                let value = node.getValue();
                 if (value === '' || typeof value === 'object') value = 0;
                 return value[Symbol.toPrimitive];
               }
@@ -402,7 +457,7 @@ class glsDB {
 
             if (prop === 'valueOf') {
               return function() {
-                return node.value;
+                return node.getValue();
               }
             }
 
@@ -462,7 +517,7 @@ class glsDB {
             //  otherwise return the proxied child node
 
             //console.log('isArray: ' + node.isArray);
-            if (node.isArray) return node._(prop).value;
+            if (node.isArray) return node._(prop).getValue();
             return node.$(prop).proxy;
 
           },
@@ -484,6 +539,15 @@ class glsDB {
 
       }
 
+      rawSet(value) {
+        this.#globalNode.set(...this.subscripts, value);
+        glsdb.emit('set', {
+          node: this,
+          subscripts: this.subscripts.slice(),
+          value: value
+        });
+      }
+
       set value(val) {
         if (typeof val !== 'undefined' && typeof val !== 'null') {
           if (typeof val === 'object') {
@@ -493,14 +557,41 @@ class glsDB {
             let args = this.subscripts.slice();
             args.push(val);
             this.#globalNode.set(...args);
+            glsdb.emit('set', {
+              node: this,
+              subscripts: this.subscripts.slice(),
+              value: val
+            });
           }
         }
       }
+
       get value() {
-        if (!this.exists) return '';
-        if (!this.isLeafNode) return this.document;
+        let defined = this.defined;
+        //if (!this.exists) return '';
+        //if (!this.isLeafNode) return this.document;
+        if (defined === '0') return '';
+        if (defined !== '1') return this.document;
 
         let value = this.#globalNode.get(...this.subscripts);
+        glsdb.emit('get', {
+          node: this,
+          subscripts: this.subscripts.slice()
+        });
+        if (value === 'true') value = true;
+        if (value === 'false') value = false;
+        return value;
+      }
+
+      getValue() {
+        // get but without any existence checks for optimising
+        // where these checks have already been done
+
+        let value = this.#globalNode.get(...this.subscripts);
+        glsdb.emit('get', {
+          node: this,
+          subscripts: this.subscripts.slice()
+        });
         if (value === 'true') value = true;
         if (value === 'false') value = false;
         return value;
@@ -508,22 +599,55 @@ class glsDB {
 
       delete() {
         this.#globalNode.delete(...this.subscripts);
+        glsdb.emit('delete', {
+          node: this,
+          subscripts: this.subscripts.slice()
+        });
+      }
+
+      get defined() {
+        glsdb.emit('defined', {
+          method: 'defined',
+          node: this,
+          subscripts: this.subscripts.slice()
+        });
+        return this.#globalNode.defined(...this.subscripts);
       }
 
       get exists() {
+        glsdb.emit('defined', {
+          method: 'exists',
+          node: this,
+          subscripts: this.subscripts.slice()
+        });
         return (this.#globalNode.defined(...this.subscripts) !== '0');
       }
 
       get hasChildren() {
+        glsdb.emit('defined', {
+          method: 'hasChildren',
+          node: this,
+          subscripts: this.subscripts.slice()
+        });
         let def = this.#globalNode.defined(...this.subscripts);
         return (def === '10' || def === '11');
       }
 
       get isLeafNode() {
+        glsdb.emit('defined', {
+          method: 'isLeafNode',
+          node: this,
+          subscripts: this.subscripts.slice()
+        });
         return (this.#globalNode.defined(...this.subscripts) === '1');
       }
 
       get hasValue() {
+        glsdb.emit('defined', {
+          method: 'hasValue',
+          node: this,
+          subscripts: this.subscripts.slice()
+        });
         return (this.#globalNode.defined(...this.subscripts) === '1');
       }
 
@@ -541,6 +665,11 @@ class glsDB {
         amount = amount || 1;
         let args = this.subscripts.slice();
         args.push(amount);
+        glsdb.emit('increment', {
+          node: this,
+          subscripts: this.subscripts.slice(),
+          by: amount
+        });
         return this.#globalNode.increment(...args);
       }
 
@@ -548,6 +677,10 @@ class glsDB {
         let key = '';
         let args = this.subscripts.slice();
         args.push(key);
+        glsdb.emit('next', {
+          node: this,
+          subscripts: args
+        });
         key = this.#globalNode.next(...args);
         if (key !== '') {
           let keys = [...this._keys];
@@ -560,6 +693,10 @@ class glsDB {
         let key = '';
         let args = this.subscripts.slice();
         args.push(key);
+        glsdb.emit('previous', {
+          node: this,
+          subscripts: args
+        });
         key = this.#globalNode.previous(...args);
         if (key !== '') {
           let _keys = [...this._keys];
@@ -584,6 +721,10 @@ class glsDB {
         if (key === '') return;
         let parent = this.parent;
         let args = this.subscripts.slice();
+        glsdb.emit('next', {
+          node: parent,
+          subscripts: args
+        });
         key = parent.#globalNode.next(...args);
         if (key !== '') {
           let _keys = [...parent._keys];
@@ -597,6 +738,10 @@ class glsDB {
         if (key === '') return;
         let parent = this.parent;
         let args = this.subscripts.slice();
+        glsdb.emit('previous', {
+          node: parent,
+          subscripts: args
+        });
         key = parent.#globalNode.previous(...args);
         if (key !== '') {
           let _keys = [...parent._keys];
@@ -608,12 +753,12 @@ class glsDB {
       getChild(key) {
         let _keys = [...this._keys];
         _keys.push(key);
-        let newNode = new glsdb.node(_keys);
-        return newNode;
+        return new glsdb.node(_keys);
       }
 
       $(keys) {
-        if (Array.isArray(keys)) {
+        //if (Array.isArray(keys)) {
+        if (keys.constructor === Array) {
           let node = this;
           for (let i = 0; i < keys.length; i++) {
             let key = keys[i];
@@ -643,12 +788,14 @@ class glsDB {
             lastChild = this.lastChild;
           }
           if (!lastChild) {
-            this._(0).value = value;
+            //this._(0).value = value;
+            this._(0).rawSet(value);
             return;
           }
           let lastIndex = lastChild.key;
           let index = getArrayValue(lastIndex) + 1;
-          this._(index).value = value;
+          //this._(index).value = value;
+          this._(index).rawSet(value);
         }
       }
 
@@ -664,7 +811,7 @@ class glsDB {
             index = lastIndex + index + 1;
           }
           let el = this._(index);
-          if (el.exists) return el.value;
+          if (el.exists) return el.getValue();
           return;
         }
       }
@@ -685,7 +832,7 @@ class glsDB {
           getLastArrayElement(this);  // tidy up if necessary
           let found = false;
           this.forEachChildNode(function(memberNode) {
-            if (memberNode.value === value) {
+            if (memberNode.getValue() === value) {
               found = true;
               return false;
             }
@@ -723,7 +870,7 @@ class glsDB {
               return;
             }
           }
-          let value = lastElement.value;
+          let value = lastElement.getValue();
           lastElement.delete();
           return value;
         }
@@ -815,6 +962,10 @@ class glsDB {
         let subscripts = this.subscripts.slice();
         subscripts.push(key);
         while (!stop && (key = this.#globalNode[fn](...subscripts)) != "") {
+          glsdb.emit(fn, {
+            node: this,
+            subscripts: subscripts
+          });
           if (options.startsWith && !key.startsWith(options.startsWith)) {
             stop = true;
             break;
@@ -869,12 +1020,20 @@ class glsDB {
         timeout = timeout || -1;
         let args = this.subscripts.slice();
         args.push(timeout);
+        glsdb.emit('lock', {
+          node: this,
+          subscripts: args
+        });
         let status = this.#globalNode.lock(...args);
         return (status === '1');
       }
 
       unlock() {
         //console.log('lock unset for ' + this.name + ': ' + this.subscripts);
+        glsdb.emit('unlock', {
+          node: this,
+          subscripts: this.subscripts.slice()
+        });
         let status = this.#globalNode.unlock(...this.subscripts);
         return (status === '1');
       }
@@ -890,14 +1049,14 @@ class glsDB {
           callback = options;
           options = {};
         }
-        //let mcursor = db_mod.mcursor;
+        let getdata = options.getdata || false;
         let direction = options.direction || 'forwards';
         if (direction !== 'forwards' && direction !== 'backwards' && direction !== 'reverse') {
           direction = 'forwards';
         }
         let opts = {
           multilevel: true,
-          getdata: false
+          getdata: getdata
         };
         let global = {
           global: this.name
@@ -920,8 +1079,14 @@ class glsDB {
             }
             else {
               if (callback) {
-                let status = callback(new glsdb.node(keys));
-                if (status === false) stop = true;
+                if (getdata) {
+                  let status = callback(keys, result.data);
+                  if (status === false) stop = true;
+                }
+                else {
+                  let status = callback(new glsdb.node(keys));
+                  if (status === false) stop = true;
+                }
               }
             }
           }
@@ -954,46 +1119,16 @@ class glsDB {
 
       get document() {
         return glsdb.document(this);
-        /*
+      }
 
-        if (!this.hasChildren) return this.value;
-        let obj = {};
-        let baseKeyLength = this.keys.length;
-        if (isArrayKey(this.firstChild.key)) obj = [];
-        this.forEachLeafNode(function(node) {
-          // ignore any data nodes if they also have children)
-          if (!node.hasChildren) {
-            let keys = [...node.keys];
-            keys.splice(0, baseKeyLength);
-            let o = obj;
-            keys.forEach(function(key, index) {
-              if (isArrayKey(key)) {
-                key = getArrayValue(key);
-              }
-              if (index === (keys.length - 1)) {
-                o[key] = node.value;
-              }
-              else {
-                let nextKey = keys[index + 1];
-                if (isArrayKey(nextKey)) {
-                 if (typeof o[key] === 'undefined') o[key] = [];
-                }
-                else {
-                  if (typeof o[key] === 'undefined') o[key] = {};
-                }
-                o = o[key];
-              }
-            });
-          }
-        });
-        return obj;
-        */
+      get document_q() {
+        return glsdb.document(this, 'mcursor');
       }
 
       set document(obj) {
-        this.delete();
+        //this.delete();
         if (typeof obj !== 'object') {
-          this.value = obj;
+          this.rawSet(obj);
         }
         else {
           __setDocument(this, obj);
