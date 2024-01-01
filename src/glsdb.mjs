@@ -23,7 +23,7 @@
  |  limitations under the License.                                           |
  ----------------------------------------------------------------------------
 
-3 December 2023
+31 December 2023
 
  */
 
@@ -767,7 +767,7 @@ class glsDB {
           return node;
         }
         else {
-          return this.getChild(keys);
+          return this.getChild(keys.toString());
         }
       }
 
@@ -1074,6 +1074,10 @@ class glsDB {
           while (!stop && (result = query.next()) !== null) {
             let keys = [...result.key];
             keys.unshift(this.name);
+            glsdb.emit('cursor_next', {
+              node: this,
+              subscripts: keys
+            });
             if (!keys.toString().startsWith(startString)) {
               stop = true;
             }
@@ -1095,6 +1099,10 @@ class glsDB {
           while (!stop && (result = query.previous()) !== null) {
             let keys = [...result.key];
             keys.unshift(this.name);
+            glsdb.emit('cursor_previous', {
+              node: this,
+              subscripts: keys
+            });
             if (!keys.toString().startsWith(startString)) {
               stop = true;
             }
