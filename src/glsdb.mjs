@@ -2,7 +2,7 @@
  ----------------------------------------------------------------------------
  | glsDB: Global Storage Database Abstraction                                |
  |                                                                           |
- | Copyright (c) 2023 MGateway Ltd,                                          |
+ | Copyright (c) 2023-4 MGateway Ltd,                                        |
  | Redhill, Surrey UK.                                                       |
  | All rights reserved.                                                      |
  |                                                                           |
@@ -23,7 +23,7 @@
  |  limitations under the License.                                           |
  ----------------------------------------------------------------------------
 
-31 December 2023
+29 January 2024
 
  */
 
@@ -70,6 +70,10 @@ class glsDB {
         return value.split(']')[0];
       }
       return key;
+    }
+
+    function isNumeric(string){
+      return !isNaN(string);
     }
 
     function setArrayValue(value) {
@@ -540,7 +544,7 @@ class glsDB {
       }
 
       rawSet(value) {
-        this.#globalNode.set(...this.subscripts, value);
+        this.#globalNode.set(...this.subscripts, value.toString());
         glsdb.emit('set', {
           node: this,
           subscripts: this.subscripts.slice(),
@@ -555,7 +559,7 @@ class glsDB {
           }
           else {
             let args = this.subscripts.slice();
-            args.push(val);
+            args.push(val.toString());
             this.#globalNode.set(...args);
             glsdb.emit('set', {
               node: this,
@@ -579,7 +583,8 @@ class glsDB {
           subscripts: this.subscripts.slice()
         });
         if (value === 'true') value = true;
-        if (value === 'false') value = false;
+        else if (value === 'false') value = false;
+        else if (value !=='' && isNumeric(value) && value.length < 15) value = +value;
         return value;
       }
 
@@ -593,7 +598,8 @@ class glsDB {
           subscripts: this.subscripts.slice()
         });
         if (value === 'true') value = true;
-        if (value === 'false') value = false;
+        else if (value === 'false') value = false;
+        else if (value !== '' && isNumeric(value) && value.length < 15) value = +value;
         return value;
       }
 
@@ -756,13 +762,50 @@ class glsDB {
         return new glsdb.node(_keys);
       }
 
+      getChildAfter(seed) {
+        let childNode = false;
+        this.forEachChildNode({from: seed}, function(node) {
+          if (node.key === seed.toString()) {
+            childNode = node.nextSibling;
+          }
+          else {
+            childNode = node;
+          }
+          return false;
+        });
+        return childNode;
+      }
+
+      childAfter(seed) {
+        return this.getChildAfter(seed);
+      }
+
+      getChildBefore(seed) {
+        let childNode = false;
+        this.forEachChildNode({direction: 'reverse', from: seed}, function(node) {
+          if (node.key === seed.toString()) {
+            childNode = node.previousSibling;
+          }
+          else {
+            childNode = node;
+          }
+          return false;
+        });
+        return childNode;
+      }
+
+      childBefore(seed) {
+        return this.getChildBefore(seed);
+      }
+
+
       $(keys) {
         //if (Array.isArray(keys)) {
         if (keys.constructor === Array) {
           let node = this;
           for (let i = 0; i < keys.length; i++) {
             let key = keys[i];
-            node = node.getChild(key);
+            node = node.getChild(key.toString());
           }
           return node;
         }
@@ -937,7 +980,7 @@ class glsDB {
           if (seedNode) key = seedNode.key;
         }
         if (options.from) {
-          let childNode = getChildNode(this, options.from);
+          let childNode = getChildNode(this, options.from.toString());
           let seedNode;
           if (fn === 'next') {
             seedNode = childNode.previousSibling;
@@ -948,7 +991,7 @@ class glsDB {
           if (seedNode) key = seedNode.key;
         }
         if (options.to) {
-          let childNode = getChildNode(this, options.to);
+          let childNode = getChildNode(this, options.to.toString());
           let endNode;
           if (fn === 'next') {
             endNode = childNode.nextSibling;
