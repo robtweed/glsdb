@@ -23,7 +23,7 @@
  |  limitations under the License.                                           |
  ----------------------------------------------------------------------------
 
-29 January 2024
+17 February 2024
 
  */
 
@@ -544,11 +544,20 @@ class glsDB {
       }
 
       rawSet(value) {
-        this.#globalNode.set(...this.subscripts, value.toString());
+        let val = value.toString();
+        if (+value < 1 && +value > 0) {
+          val = val.toString().slice(1).toString();
+          //val = val.slice(1);
+        }
+        if (+val < 0 && +val > -1) {
+          val = val.toString().replace('-0.', '-.');
+          val = val.toString();
+        }
+        this.#globalNode.set(...this.subscripts, val);
         glsdb.emit('set', {
           node: this,
           subscripts: this.subscripts.slice(),
-          value: value
+          value: val
         });
       }
 
@@ -558,13 +567,23 @@ class glsDB {
             this.document = val;
           }
           else {
+            let val1 = val.toString();
+            if (+val < 1 && +val > 0) {
+              val1 = val.toString().slice(1).toString();
+              //console.log(val1);
+            }
+            if (+val < 0 && +val > -1) {
+              val1 = val.toString().replace('-0.', '-.');
+              val1 = val1.toString();
+              //console.log(val1);
+            }
             let args = this.subscripts.slice();
-            args.push(val.toString());
+            args.push(val1);
             this.#globalNode.set(...args);
             glsdb.emit('set', {
               node: this,
               subscripts: this.subscripts.slice(),
-              value: val
+              value: val1
             });
           }
         }
@@ -758,7 +777,15 @@ class glsDB {
 
       getChild(key) {
         let _keys = [...this._keys];
-        _keys.push(key);
+        let key1 = key.toString();
+        if (+key < 1 && +key > 0) {
+          key1 = key.toString().slice(1).toString();
+        }
+        if (+key < 0 && +key > -1) {
+          key1 = key.toString().replace('-0.', '-.');
+          key1 = key1.toString();
+        }
+        _keys.push(key1);
         return new glsdb.node(_keys);
       }
 
