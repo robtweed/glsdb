@@ -23,7 +23,7 @@
  |  limitations under the License.                                           |
  ----------------------------------------------------------------------------
 
-17 February 2024
+27 February 2024
 
  */
 
@@ -190,7 +190,8 @@ class glsDB {
           childNode = getChildNode(node, key);
         }
         let childObj = obj[key];
-        if (childObj === null || typeof childObj === 'undefined') childObj = '';
+        if (childObj === null) childObj = 'null';
+        if (typeof childObj === 'undefined') childObj = '';
         if (typeof childObj === 'object') {
           __setDocument(childNode, childObj, true);
         }
@@ -198,7 +199,7 @@ class glsDB {
           return;
         }
         else {
-          childNode.rawSet(obj[key].toString());
+          childNode.rawSet(childObj);
         }
       }
     }
@@ -544,6 +545,8 @@ class glsDB {
       }
 
       rawSet(value) {
+        if (value === null) value = 'null';
+        if (typeof value === 'undefined') value = '';
         let val = value.toString();
         if (+value < 1 && +value > 0) {
           val = val.toString().slice(1).toString();
@@ -562,30 +565,30 @@ class glsDB {
       }
 
       set value(val) {
-        if (typeof val !== 'undefined' && typeof val !== 'null') {
-          if (typeof val === 'object') {
-            this.document = val;
+        if (val === null) val = 'null';
+        if (typeof val === 'undefined') val = '';
+        if (typeof val === 'object') {
+          this.document = val;
+        }
+        else {
+          let val1 = val.toString();
+          if (+val < 1 && +val > 0) {
+            val1 = val.toString().slice(1).toString();
+            //console.log(val1);
           }
-          else {
-            let val1 = val.toString();
-            if (+val < 1 && +val > 0) {
-              val1 = val.toString().slice(1).toString();
-              //console.log(val1);
-            }
-            if (+val < 0 && +val > -1) {
-              val1 = val.toString().replace('-0.', '-.');
-              val1 = val1.toString();
-              //console.log(val1);
-            }
-            let args = this.subscripts.slice();
-            args.push(val1);
-            this.#globalNode.set(...args);
-            glsdb.emit('set', {
-              node: this,
-              subscripts: this.subscripts.slice(),
-              value: val1
-            });
+          if (+val < 0 && +val > -1) {
+            val1 = val.toString().replace('-0.', '-.');
+            val1 = val1.toString();
+            //console.log(val1);
           }
+          let args = this.subscripts.slice();
+          args.push(val1);
+          this.#globalNode.set(...args);
+          glsdb.emit('set', {
+            node: this,
+            subscripts: this.subscripts.slice(),
+            value: val1
+          });
         }
       }
 
@@ -601,7 +604,8 @@ class glsDB {
           node: this,
           subscripts: this.subscripts.slice()
         });
-        if (value === 'true') value = true;
+        if (value === 'null') value = null;
+        else if (value === 'true') value = true;
         else if (value === 'false') value = false;
         else if (value !=='' && isNumeric(value) && value.length < 15) value = +value;
         return value;
@@ -616,7 +620,8 @@ class glsDB {
           node: this,
           subscripts: this.subscripts.slice()
         });
-        if (value === 'true') value = true;
+        if (value === 'null') value = null;
+        else if (value === 'true') value = true;
         else if (value === 'false') value = false;
         else if (value !== '' && isNumeric(value) && value.length < 15) value = +value;
         return value;
