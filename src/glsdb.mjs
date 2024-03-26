@@ -23,7 +23,7 @@
  |  limitations under the License.                                           |
  ----------------------------------------------------------------------------
 
-27 February 2024
+26 March 2024
 
  */
 
@@ -457,12 +457,12 @@ class glsDB {
             }
 
             if (prop === '_get') {
-              return node.document;
+              return node.value;
             }
 
             if (prop === 'valueOf') {
               return function() {
-                return node.getValue();
+                return node.value;
               }
             }
 
