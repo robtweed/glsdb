@@ -23,7 +23,7 @@
  |  limitations under the License.                                           |
  ----------------------------------------------------------------------------
 
-26 March 2024
+30 March 2024
 
  */
 
@@ -121,6 +121,13 @@ class glsDB {
       db = new server();
       db.open(params);
       dbType = params.type;
+
+      this.dbx = {
+        db: db,
+        mglobal: mglobal,
+        mcursor: mcursor,
+        mclass: mclass
+      };
 
       use = function() {
         let args = [...arguments];
